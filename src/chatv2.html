@@ -23,8 +23,10 @@
             integrity="sha512-l40eBFtXx+ve5RryIELC3y6/OM6Nu89mLGQd7fg1C93tN6XrkC3supb+/YiD/Y+B8P37kdJjtG1MT1kOO2VzxA==" 
             crossorigin="anonymous" 
             referrerpolicy="no-referrer"></script>
-    <!-- WebRTC Manager -->
-    <script src="webrtc_manager.js"></script>
+    <!-- Cloudflare Realtime API Client -->
+    <script src="static/js/cloudflare_realtime_client.js"></script>
+    <!-- Cloudflare WebRTC Manager -->
+    <script src="static/js/cloudflare_webrtc_manager.js"></script>
 
     <style>
         body {
@@ -1216,30 +1218,19 @@
                     try {
                         if (!this.webrtcManager) return;
 
-                        // Create offer using WebRTCManager
-                        const offer = await this.webrtcManager.createOffer();
+                        // For Cloudflare Realtime API, negotiation is handled internally
+                        // We just need to start the connection with the local stream
                         this.isLoadingOffer = true;
-
-                        // Send offer to server
-                        const response = await fetch('/api/offer', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                sdp: offer.sdp,
-                                type: offer.type,
-                                macAddress: this.macAddress,
-                            })
-                        });
-
-                        const answer = await response.json();
                         
-                        // Handle answer using WebRTCManager
-                        await this.webrtcManager.handleAnswer(answer);
+                        // Start Cloudflare Realtime connection
+                        await this.webrtcManager.start(this.localStream);
+                        
+                        console.log('Cloudflare Realtime connection established');
 
                     } catch (error) {
-                        console.error('Error during negotiation:', error);
+                        console.error('Error during Cloudflare negotiation:', error);
                         this.isLoadingOffer = false;
-                        alert('Error during negotiation: ' + error.message);
+                        alert('Error during Cloudflare negotiation: ' + error.message);
                     }
                 },
                 setupDataChannel() {
@@ -1270,8 +1261,12 @@
                         iceConfig = { iceServers: [], iceCandidatePoolSize: 0 };
                     }
 
-                    // Initialize WebRTCManager with enhanced configuration
-                    this.webrtcManager = new WebRTCManager(iceConfig);
+                    // Initialize CloudflareWebRTCManager with Cloudflare Realtime API
+                    console.log('CloudflareWebRTCManager available:', typeof CloudflareWebRTCManager);
+                    if (typeof CloudflareWebRTCManager === 'undefined') {
+                        throw new Error('CloudflareWebRTCManager is not defined. Please check if the script is loaded correctly.');
+                    }
+                    this.webrtcManager = new CloudflareWebRTCManager(iceConfig);
                     this.status = "connecting...";
                     
                     // Setup event handlers

@@ -11,6 +11,7 @@ from src.config.ice_config import ice_config
 from src.server import XiaoZhiServer
 from src.track.audio import AudioFaceSwapper
 from src.track.video import VideoFaceSwapper
+from src.cloudflare_backend import cloudflare_backend
 
 # Setup logger
 logging.basicConfig(
@@ -71,9 +72,18 @@ async def chat(request):
 
 
 async def ice(request):
-    """Return ICE server configuration"""
-    ice_servers_config = ice_config.get_ice_config()
-    return web.Response(content_type="application/json", text=json.dumps(ice_servers_config, ensure_ascii=False))
+    """Return ICE server configuration - now optimized for Cloudflare Realtime API"""
+    # Check if Cloudflare Realtime API is enabled
+    use_cloudflare = os.getenv('USE_CLOUDFLARE_REALTIME', 'true').lower() == 'true'
+    
+    if use_cloudflare:
+        # Return Cloudflare Realtime API configuration
+        cloudflare_config = ice_config.get_cloudflare_realtime_config()
+        return web.Response(content_type="application/json", text=json.dumps(cloudflare_config, ensure_ascii=False))
+    else:
+        # Return traditional ICE configuration for backward compatibility
+        ice_servers_config = ice_config.get_ice_config()
+        return web.Response(content_type="application/json", text=json.dumps(ice_servers_config, ensure_ascii=False))
 
 
 async def ice_status(request):
@@ -198,7 +208,15 @@ def run():
 
     app.router.add_get("/api/ice", ice)
     app.router.add_get("/api/ice/status", ice_status)
-    app.router.add_post("/api/offer", offer)
+    app.router.add_post("/api/offer", offer)  # Keep for backward compatibility
+    
+    # Cloudflare Realtime API endpoints
+    app.router.add_post("/api/cloudflare/session", cloudflare_backend.handle_cloudflare_session)
+    app.router.add_post("/api/cloudflare/audio", cloudflare_backend.handle_audio_processing)
+    app.router.add_post("/api/cloudflare/video", cloudflare_backend.handle_video_processing)
+    app.router.add_get("/api/cloudflare/sessions", cloudflare_backend.get_session_status)
+    app.router.add_get("/api/cloudflare/sessions/{sessionId}", cloudflare_backend.get_session_status)
+    
     app.router.add_static("/static/", path=os.path.join(ROOT, "static"), name="static")
 
     web.run_app(app, host="0.0.0.0", port=PORT)

@@ -11,13 +11,13 @@ class ICEConfig:
     """ICE server configuration management class"""
 
     def __init__(self):
-        # Default STUN servers
+        # Default STUN servers - prioritize Cloudflare for WebRTC service compatibility
         self.default_stun_urls = [
-            "stun:stun.miwifi.com:3478",
+            "stun:stun.cloudflare.com:3478",  # Primary Cloudflare STUN
             "stun:stun.l.google.com:19302",
             "stun:stun1.l.google.com:19302",
             "stun:stun.stunprotocol.org:3478",
-            "stun:stun.cloudflare.com:3478",
+            "stun:stun.miwifi.com:3478",
         ]
         
         # TURN server configuration from environment variables
@@ -30,7 +30,6 @@ class ICEConfig:
         # Add the provided Cloudflare TURN server configuration
         turn_servers.append({
             'urls': [
-                "stun:stun.cloudflare.com:3478",
                 "turn:turn.cloudflare.com:3478?transport=udp",
                 "turn:turn.cloudflare.com:3478?transport=tcp",
                 "turns:turn.cloudflare.com:5349?transport=tcp"
@@ -84,6 +83,33 @@ class ICEConfig:
             "bundlePolicy": "max-bundle",
             "rtcpMuxPolicy": "require"
         }
+    
+    def get_cloudflare_optimized_config(self) -> Dict[str, Any]:
+        """Get ICE configuration optimized for Cloudflare WebRTC service"""
+        ice_servers = []
+
+        # Prioritize Cloudflare STUN server
+        ice_servers.append({"urls": "stun:stun.cloudflare.com:3478"})
+        
+        # Add other STUN servers as fallbacks
+        for url in self.default_stun_urls[1:]:  # Skip first one as it's already added
+            ice_servers.append({"urls": url})
+
+        # Add TURN servers if available
+        for turn_server in self.turn_servers:
+            ice_servers.append({
+                "urls": turn_server['urls'],
+                "username": turn_server['username'],
+                "credential": turn_server['credential']
+            })
+
+        return {
+            "iceServers": ice_servers, 
+            "iceCandidatePoolSize": 10, 
+            "iceTransportPolicy": "all",
+            "bundlePolicy": "max-bundle",
+            "rtcpMuxPolicy": "require"
+        }
 
     def get_server_ice_servers(self) -> List[RTCIceServer]:
         """Get server-side ICE server objects"""
@@ -113,6 +139,31 @@ class ICEConfig:
             "bundlePolicy": ice_config["bundlePolicy"],
             "iceTransportPolicy": ice_config["iceTransportPolicy"],
             "rtcpMuxPolicy": ice_config["rtcpMuxPolicy"]
+        }
+    
+    def get_cloudflare_webrtc_config(self) -> Dict[str, Any]:
+        """Get configuration optimized for Cloudflare WebRTC service"""
+        return {
+            "iceServers": [
+                {
+                    "urls": "stun:stun.cloudflare.com:3478"
+                }
+            ],
+            "bundlePolicy": "max-bundle"
+        }
+    
+    def get_cloudflare_realtime_config(self) -> Dict[str, Any]:
+        """Get configuration for Cloudflare Realtime API integration"""
+        return {
+            "appId": os.getenv('CLOUDFLARE_APP_ID', 'cb015f7379343011a6a0df5346eaf66a'),
+            "appSecret": os.getenv('CLOUDFLARE_APP_SECRET', '766167af0976e9a98f16523f4c38b4abfa7b8d015a810c0dafd16cc68967b202'),
+            "basePath": "https://rtc.live.cloudflare.com/v1",
+            "iceServers": [
+                {
+                    "urls": "stun:stun.cloudflare.com:3478"
+                }
+            ],
+            "bundlePolicy": "max-bundle"
         }
     
     def validate_configuration(self) -> Dict[str, Any]:
@@ -166,6 +217,8 @@ class ICEConfig:
         summary += f"- TURN servers: {validation['turn_servers']}\n"
         summary += f"- Total servers: {validation['total_servers']}\n"
         summary += f"- Configuration valid: {validation['valid']}\n"
+        summary += f"- Cloudflare optimized: Yes (stun.cloudflare.com prioritized)\n"
+        summary += f"- Bundle policy: max-bundle (Cloudflare compatible)\n"
         
         if validation['issues']:
             summary += f"- Issues found: {len(validation['issues'])}\n"

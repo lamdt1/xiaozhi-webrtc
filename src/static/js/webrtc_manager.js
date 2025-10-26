@@ -2,6 +2,8 @@
  * WebRTCManager - Enhanced RTCPeerConnection management
  * Based on Cloudflare Realtime API patterns with XiaoZhi-specific optimizations
  */
+console.log('WebRTCManager script loading...');
+
 class WebRTCManager {
     constructor(options = {}) {
         this.options = {
@@ -584,3 +586,5 @@ class WebRTCManager {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = WebRTCManager;
 }
+
+console.log('WebRTCManager script loaded successfully');

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare Realtime API Integration Tests</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Cloudflare Realtime API Integration Tests</h1>
+            <p>Comprehensive test suite for Cloudflare Realtime API functionality</p>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Test Configuration</h3>
+            <p><strong>App ID:</strong> cb015f7379343011a6a0df5346eaf66a</p>
+            <p><strong>Base Path:</strong> https://rtc.live.cloudflare.com/v1</p>
+            <p><strong>Note:</strong> Tests will show expected network errors in test environment without real Cloudflare access</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Unit Tests</h3>
+            <button class="test-button" onclick="runUnitTests()">Run Unit Tests</button>
+            <button class="test-button" onclick="runPerformanceTests()">Run Performance Tests</button>
+            <button class="test-button" onclick="runAllTests()">Run All Tests</button>
+            <button class="test-button" onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🌐 Integration Tests</h3>
+            <button class="test-button" onclick="testCloudflareConnection()">Test Cloudflare Connection</button>
+            <button class="test-button" onclick="testBackendAPI()">Test Backend API</button>
+            <button class="test-button" onclick="testFullIntegration()">Test Full Integration</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Results</h3>
+            <div id="testStatus" class="status info">Ready to run tests</div>
+            <div id="testResults" class="results"></div>
+        </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/8.1.2/adapter.min.js"></script>
+    <script src="../src/static/js/cloudflare_realtime_client.js"></script>
+    <script src="../src/static/js/cloudflare_webrtc_manager.js"></script>
+    <script src="cloudflare_realtime_tests.js"></script>
+
+    <script>
+        let testRunner = null;
+        let performanceRunner = null;
+
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('testStatus');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        function appendResult(message) {
+            const resultsEl = document.getElementById('testResults');
+            resultsEl.textContent += message + '\n';
+            resultsEl.scrollTop = resultsEl.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('testResults').textContent = '';
+            updateStatus('Results cleared', 'info');
+        }
+
+        async function runUnitTests() {
+            updateStatus('Running unit tests...', 'info');
+            appendResult('🧪 Starting Unit Tests...\n');
+            
+            try {
+                testRunner = new CloudflareRealtimeAPITests();
+                const results = await testRunner.runAllTests();
+                
+                const passed = results.filter(r => r.status === 'PASS').length;
+                const failed = results.filter(r => r.status === 'FAIL').length;
+                
+                if (failed === 0) {
+                    updateStatus(`Unit tests completed: ${passed} passed`, 'success');
+                } else {
+                    updateStatus(`Unit tests completed: ${passed} passed, ${failed} failed`, 'error');
+                }
+            } catch (error) {
+                updateStatus(`Unit tests failed: ${error.message}`, 'error');
+                appendResult(`❌ Test execution error: ${error.message}\n`);
+            }
+        }
+
+        async function runPerformanceTests() {
+            updateStatus('Running performance tests...', 'info');
+            appendResult('⚡ Starting Performance Tests...\n');
+            
+            try {
+                performanceRunner = new CloudflarePerformanceTests();
+                await performanceRunner.runPerformanceTests();
+                updateStatus('Performance tests completed', 'success');
+            } catch (error) {
+                updateStatus(`Performance tests failed: ${error.message}`, 'error');
+                appendResult(`❌ Performance test error: ${error.message}\n`);
+            }
+        }
+
+        async function runAllTests() {
+            updateStatus('Running all tests...', 'info');
+            clearResults();
+            
+            await runUnitTests();
+            await runPerformanceTests();
+            
+            updateStatus('All tests completed', 'success');
+        }
+
+        async function testCloudflareConnection() {
+            updateStatus('Testing Cloudflare connection...', 'info');
+            appendResult('🌐 Testing Cloudflare Realtime API Connection...\n');
+            
+            try {
+                const client = new CloudflareRealtimeClient(
+                    'cb015f7379343011a6a0df5346eaf66a',
+                    '766167af0976e9a98f16523f4c38b4abfa7b8d015a810c0dafd16cc68967b202'
+                );
+                
+                appendResult('✅ CloudflareRealtimeClient created successfully\n');
+                
+                // Test basic functionality
+                const mockOffer = {
+                    sdp: 'v=0\r\no=- 1234567890 2 IN IP4 127.0.0.1\r\n...',
+                    type: 'offer'
+                };
+                
+                try {
+                    await client.newSession(mockOffer.sdp);
+                    appendResult('✅ Session creation successful\n');
+                    updateStatus('Cloudflare connection test passed', 'success');
+                } catch (error) {
+                    if (error.message.includes('fetch') || error.message.includes('CORS')) {
+                        appendResult('⚠️ Session creation failed (expected in test environment)\n');
+                        appendResult('   This is normal - requires real Cloudflare access\n');
+                        updateStatus('Cloudflare connection test completed (expected network error)', 'info');
+                    } else {
+                        throw error;
+                    }
+                }
+                
+                await client.close();
+                appendResult('✅ Client cleanup completed\n');
+                
+            } catch (error) {
+                updateStatus(`Cloudflare connection test failed: ${error.message}`, 'error');
+                appendResult(`❌ Connection test error: ${error.message}\n`);
+            }
+        }
+
+        async function testBackendAPI() {
+            updateStatus('Testing backend API...', 'info');
+            appendResult('🔧 Testing Backend API Endpoints...\n');
+            
+            const endpoints = [
+                '/api/ice',
+                '/api/cloudflare/sessions',
+                '/api/cloudflare/session'
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(endpoint);
+                    if (response.ok) {
+                        appendResult(`✅ ${endpoint}: OK (${response.status})\n`);
+                    } else {
+                        appendResult(`⚠️ ${endpoint}: ${response.status} ${response.statusText}\n`);
+                    }
+                } catch (error) {
+                    appendResult(`❌ ${endpoint}: ${error.message}\n`);
+                }
+            }
+            
+            updateStatus('Backend API test completed', 'info');
+        }
+
+        async function testFullIntegration() {
+            updateStatus('Testing full integration...', 'info');
+            appendResult('🔄 Testing Full Integration...\n');
+            
+            try {
+                // Test 1: Initialize CloudflareWebRTCManager
+                appendResult('1. Initializing CloudflareWebRTCManager...\n');
+                const manager = new CloudflareWebRTCManager({
+                    appId: 'cb015f7379343011a6a0df5346eaf66a',
+                    appSecret: '766167af0976e9a98f16523f4c38b4abfa7b8d015a810c0dafd16cc68967b202'
+                });
+                
+                await manager.initialize();
+                appendResult('✅ CloudflareWebRTCManager initialized\n');
+                
+                // Test 2: Create data channel
+                appendResult('2. Creating data channel...\n');
+                const channel = manager.createDataChannel('test-channel');
+                appendResult('✅ Data channel created\n');
+                
+                // Test 3: Get connection status
+                appendResult('3. Getting connection status...\n');
+                const status = manager.getConnectionStatus();
+                appendResult(`✅ Connection status: ${JSON.stringify(status)}\n`);
+                
+                // Test 4: Cleanup
+                appendResult('4. Cleaning up...\n');
+                await manager.stop();
+                appendResult('✅ Cleanup completed\n');
+                
+                updateStatus('Full integration test passed', 'success');
+                
+            } catch (error) {
+                updateStatus(`Full integration test failed: ${error.message}`, 'error');
+                appendResult(`❌ Integration test error: ${error.message}\n`);
+            }
+        }
+
+        // Override console.log to capture test output
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            appendResult(args.join(' '));
+        };
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus('Test page loaded successfully', 'success');
+            appendResult('🚀 Cloudflare Realtime API Test Page Loaded\n');
+            appendResult('Ready to run tests...\n');
+        });
+    </script>
+</body>
+</html>
