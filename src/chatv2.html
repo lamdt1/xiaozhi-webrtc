@@ -10,7 +10,6 @@
     <meta name="theme-color" content="#f1e6aa">
     <script src="static/js/vue.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script src="static/js/ice-crypto.js"></script>
     <!-- Live2D Cubism Core -->
     <script src="static/js/live2dcubismcore.min.js"></script>
     <!-- PIXI.js -->
@@ -19,6 +18,13 @@
     <script src="static/js/cubism4.min.js"></script>
     <!-- Live2D Manager -->
     <script src="static/js/live2d.js"></script>
+    <!-- WebRTC Adapter for cross-browser compatibility -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/8.1.2/adapter.min.js" 
+            integrity="sha512-l40eBFtXx+ve5RryIELC3y6/OM6Nu89mLGQd7fg1C93tN6XrkC3supb+/YiD/Y+B8P37kdJjtG1MT1kOO2VzxA==" 
+            crossorigin="anonymous" 
+            referrerpolicy="no-referrer"></script>
+    <!-- WebRTC Manager -->
+    <script src="webrtc_manager.js"></script>
 
     <style>
         body {
@@ -1210,60 +1216,39 @@
                 },
                 async negotiate() {
                     try {
-                        if (!this.pc) return;
+                        if (!this.webrtcManager) return;
 
-                        // Create offer
-                        const offer = await this.pc.createOffer();
-                        if (!this.pc) return;
-
-                        await this.pc.setLocalDescription(offer);
-
-                        // Optimization: don't wait for ICE gathering to complete, send offer directly
-                        // This can significantly reduce connection establishment time
-
-                        if (!this.pc) return;
+                        // Create offer using WebRTCManager
+                        const offer = await this.webrtcManager.createOffer();
                         this.isLoadingOffer = true;
 
+                        // Send offer to server
                         const response = await fetch('/api/offer', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                sdp: this.pc.localDescription.sdp,
-                                type: this.pc.localDescription.type,
+                                sdp: offer.sdp,
+                                type: offer.type,
                                 macAddress: this.macAddress,
                             })
                         });
 
                         const answer = await response.json();
-                        if (!this.pc) return;
-
-                        await this.pc.setRemoteDescription(answer);
+                        
+                        // Handle answer using WebRTCManager
+                        await this.webrtcManager.handleAnswer(answer);
 
                     } catch (error) {
                         console.error('Error during negotiation:', error);
+                        this.isLoadingOffer = false;
                         alert('Error during negotiation: ' + error.message);
-                    } finally {
-                        // this.isLoadingOffer = false;
                     }
                 },
                 setupDataChannel() {
-                    this.dataChannel = this.pc.createDataChannel('chat');
-                    this.dataChannel.onopen = () => {
-                        console.log('Data channel is open');
-                        // Send registration information after connection is established
-                        this.dataChannel.send(JSON.stringify({type: "register", macAddress: this.macAddress}));
-
-                    };
-                    this.dataChannel.onmessage = (event) => {
-                        this.messages.push(event.data);
-                        this.$nextTick(() => { this.scrollToBottom(); });
-                    };
-                    this.dataChannel.onclose = () => { console.log('Data channel closed'); };
-                    this.pc.ondatachannel = (event) => {
-                        const channel = event.channel;
-                        channel.onmessage = (e) => {
-                            const data = JSON.parse(e.data);
-                            // console.log("data", data)
+                    // Data channel is now handled by WebRTCManager
+                    // This method is kept for compatibility but functionality moved to setupWebRTCEventHandlers
+                    console.log('Data channel setup delegated to WebRTCManager');
+                },
                             if (data["type"] == "tts" && data["state"] == "sentence_start") {
                                 this.speakingState = "speaking";
                             } else {
@@ -1332,31 +1317,17 @@
                     };
                 },
                 async start() {
-                    if (this.pc) {
+                    if (this.webrtcManager) {
                         this.stop();
                     }
 
-                    // Get server ICE configuration and decrypt credentials before creating RTCPeerConnection
+                    // Get server ICE configuration
                     let iceConfig = { iceServers: [], iceCandidatePoolSize: 0 };
                     try {
                         const resp = await fetch('/api/ice');
                         const data = await resp.json();
                         iceConfig = data;
-                        // console.log('Get ICE configuration from server:', iceConfig);
-                        
-                        // Decrypt credentials (if master key is available)
-                        const masterKey = window.ICE_MASTER_KEY || localStorage.getItem('ice_master_key') || '9fcotuB_ntxL4EIRMxHk2a4S9zs5fOviL80IYrXLnq4=';
-                        if (masterKey && window.iceCrypto) {
-                            try {
-                                await window.iceCrypto.init(masterKey);
-                                iceConfig.iceServers = window.iceCrypto.processIceServers(iceConfig.iceServers);
-                                console.log('ICE credentials decrypted successfully');
-                            } catch (e) {
-                                console.warn('ICE credentials decryption failed:', e);
-                            }
-                        } else {
-                            console.warn('ICE master key not found, using encrypted credentials');
-                        }
+                        console.log('Get ICE configuration from server:', iceConfig);
                         
                         if (!iceConfig.iceServers || iceConfig.iceServers.length === 0) {
                             console.warn('No ICE servers configured, only supports LAN direct connection');
@@ -1368,60 +1339,114 @@
                         iceConfig = { iceServers: [], iceCandidatePoolSize: 0 };
                     }
 
-                    this.pc = new RTCPeerConnection(iceConfig);
+                    // Initialize WebRTCManager with enhanced configuration
+                    this.webrtcManager = new WebRTCManager(iceConfig);
                     this.status = "connecting...";
-                    this.setupDataChannel();
-                    // Add audio track
+                    
+                    // Setup event handlers
+                    this.setupWebRTCEventHandlers();
+                    
+                    // Initialize the connection
+                    await this.webrtcManager.initialize();
+                    
+                    // Add local tracks
+                    await this.webrtcManager.addLocalTracks(this.localStream);
+                    
+                    // Handle push-to-talk mode
                     this.localStream.getAudioTracks().forEach(track => {
-                        // In push-to-talk mode, initially disable audio track
                         if (this.voiceMode === 'push-to-talk') {
                             track.enabled = false;
                         }
-                        this.pc.addTrack(track, this.localStream);
                     });
 
-                    // Only add video track when camera is available
-                    if (this.hasCamera) {
-                        this.localStream.getVideoTracks().forEach(track => { this.pc.addTrack(track, this.localStream); });
-                    }
-                    this.pc.addEventListener('track', (evt) => {
-                        // Only process audio tracks, ignore video tracks
-                        if (evt.track.kind === 'audio') {
-                            this.remoteStream = evt.streams[0];
+                    this.isStarted = true;
+                    // Start negotiation
+                    await this.negotiate();
+                },
+
+                setupWebRTCEventHandlers() {
+                    if (!this.webrtcManager) return;
+
+                    // Track events
+                    this.webrtcManager.on('track', (event) => {
+                        console.log('Received remote track:', event.track.kind);
+                        if (event.track.kind === 'audio') {
+                            this.remoteStream = event.streams[0];
                             this.$nextTick(() => { this.assignVideoStreams(); });
                         }
                     });
-                    this.pc.addEventListener('connectionstatechange', () => {
-                        this.status = this.pc.connectionState;
-                        if (this.pc.connectionState === 'connected') {
+
+                    // Connection state changes
+                    this.webrtcManager.on('connectionstatechange', (state) => {
+                        this.status = state;
+                        console.log('Connection state changed:', state);
+                        
+                        if (state === 'connected') {
                             this.live2dManager.stopTalking();
                             this.live2dManager.startTalking(this.remoteStream);
                             this.isConnected = true;
                             this.isLoadingOffer = false;
                             this.$nextTick(() => {
                                 this.assignVideoStreams();
-                                // Start adaptive volume control
                                 this.startAdaptiveVolumeControl();
                             });
-                        } else if (this.pc.connectionState === 'failed') {
-                            console.error('PeerConnection failed');
-                            alert('Connection failed, may need to configure STUN/TURN server');
-                        } else if (this.pc.connectionState === 'disconnected') {
-                            console.warn('PeerConnection disconnected');
+                        } else if (state === 'failed') {
+                            console.error('WebRTC connection failed');
+                            this.isLoadingOffer = false;
+                            // Don't show alert immediately, let retry logic handle it
+                        } else if (state === 'disconnected') {
+                            console.warn('WebRTC connection disconnected');
+                            this.isConnected = false;
                         }
                     });
-                    this.pc.addEventListener('iceconnectionstatechange', () => {
-                        // console.log('ICE connection state:', this.pc.iceConnectionState);
+
+                    // ICE connection state changes
+                    this.webrtcManager.on('iceconnectionstatechange', (state) => {
+                        console.log('ICE connection state:', state);
                     });
-                    this.pc.addEventListener('icegatheringstatechange', () => {
-                        // console.log('ICE gathering state:', this.pc.iceGatheringState);
+
+                    // ICE gathering state changes
+                    this.webrtcManager.on('icegatheringstatechange', (state) => {
+                        console.log('ICE gathering state:', state);
                     });
-                    this.pc.addEventListener('signalingstatechange', () => {
-                        // console.log('Signaling state:', this.pc.signalingState);
+
+                    // Data channel messages
+                    this.webrtcManager.on('datachannelmessage', (data) => {
+                        console.log('Received data channel message:', data);
+                        this.handleDataChannelMessage(data);
                     });
-                    this.isStarted = true;
-                    // Immediately initiate negotiation
-                    this.negotiate();
+
+                    // Error handling
+                    this.webrtcManager.on('error', (error) => {
+                        console.error('WebRTC error:', error);
+                        this.isLoadingOffer = false;
+                        if (error.message.includes('Connection failed after maximum retries')) {
+                            alert('Connection failed after multiple attempts. Please check your network connection and try again.');
+                        }
+                    });
+
+                    // Reconnection handling
+                    this.webrtcManager.on('reconnect', () => {
+                        console.log('Attempting to reconnect...');
+                        this.status = "reconnecting...";
+                        this.negotiate();
+                    });
+                },
+
+                handleDataChannelMessage(data) {
+                    // Handle incoming data channel messages
+                    this.messages.push(data);
+                    this.$nextTick(() => { this.scrollToBottom(); });
+                    
+                    if (data.type === 'websocket' && data.state === 'close') {
+                        // Handle websocket close
+                    } else if (data.type === 'llm' && this.webrtcManager && this.webrtcManager.pc && this.webrtcManager.pc.video_track) {
+                        this.webrtcManager.pc.video_track.set_emoji(data.text);
+                    } else if (data.type === 'tts' && data.state === 'sentence_start') {
+                        this.speakingState = "speaking";
+                    } else {
+                        this.speakingState = "listening";
+                    }
                 },
                 stop() {
                     this.isStarted = false;
@@ -1430,14 +1455,43 @@
                     if (this.$refs.remoteVideo) { this.$refs.remoteVideo.srcObject = null; }
                     if (this.$refs.localVideo) { this.$refs.localVideo.srcObject = null; }
                     this.remoteStream = null;
-                    if (this.dataChannel) { this.dataChannel.close(); this.dataChannel = null; }
-                    if (this.pc) { this.pc.close(); this.pc = null; }
+                    
+                    // Clean up WebRTCManager
+                    if (this.webrtcManager) {
+                        this.webrtcManager.close();
+                        this.webrtcManager = null;
+                    }
 
                     // Clean up Live2D manager
                     if (this.live2dManager) {
                         this.live2dManager.destroy();
                         this.live2dManager = null;
                     }
+                },
+
+                sendDataChannelMessage(message) {
+                    if (this.webrtcManager) {
+                        return this.webrtcManager.sendData(message);
+                    }
+                    return false;
+                },
+
+                async getConnectionStats() {
+                    if (this.webrtcManager) {
+                        return await this.webrtcManager.getStats();
+                    }
+                    return null;
+                },
+
+                getConnectionInfo() {
+                    if (this.webrtcManager) {
+                        return this.webrtcManager.getConnectionInfo();
+                    }
+                    return {
+                        connectionState: 'disconnected',
+                        isConnected: false,
+                        isConnecting: false
+                    };
                 },
                 endAndBack() {
                     this.stop();

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Test script for ICE configuration functionality
-Demonstrates the secure ICE configuration system
+Demonstrates the ICE configuration system
+Note: Encryption has been removed - credentials are now stored in plain text
 """
 
 import os
@@ -12,11 +13,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from config.ice_config import ice_config
-from config.crypto_config import crypto_config
 
 
 def test_basic_configuration():
-    """Test basic ICE configuration without TURN servers"""
+    """Test basic ICE configuration"""
     print("=== Testing Basic Configuration ===")
     
     config = ice_config.get_ice_config()
@@ -27,36 +27,6 @@ def test_basic_configuration():
     for i, server in enumerate(config['iceServers']):
         print(f"  Server {i+1}: {server}")
     
-    print()
-
-
-def test_encryption():
-    """Test credential encryption and decryption"""
-    print("=== Testing Encryption/Decryption ===")
-    
-    test_username = "test_user"
-    test_password = "test_password_123"
-    
-    # Encrypt credentials
-    encrypted_username = crypto_config.encrypt_credential(test_username)
-    encrypted_password = crypto_config.encrypt_credential(test_password)
-    
-    print(f"Original Username: {test_username}")
-    print(f"Encrypted Username: encrypted:{encrypted_username}")
-    print(f"Original Password: {test_password}")
-    print(f"Encrypted Password: encrypted:{encrypted_password}")
-    
-    # Decrypt credentials
-    decrypted_username = crypto_config.decrypt_credential(encrypted_username)
-    decrypted_password = crypto_config.decrypt_credential(encrypted_password)
-    
-    print(f"Decrypted Username: {decrypted_username}")
-    print(f"Decrypted Password: {decrypted_password}")
-    
-    # Verify
-    assert test_username == decrypted_username, "Username decryption failed"
-    assert test_password == decrypted_password, "Password decryption failed"
-    print("✓ Encryption/Decryption test passed")
     print()
 
 
@@ -92,31 +62,44 @@ def test_with_environment_variables():
     print("=== Testing with Environment Variables ===")
     
     # Check if environment variables are set
-    master_key = os.getenv('ICE_MASTER_KEY')
     cf_username = os.getenv('CLOUDFLARE_TURN_USERNAME')
     cf_credential = os.getenv('CLOUDFLARE_TURN_CREDENTIAL')
-    
-    if master_key:
-        print(f"Master Key: {master_key[:20]}...")
-    else:
-        print("No master key set")
     
     if cf_username and cf_credential:
         print(f"Cloudflare Username: {cf_username[:30]}...")
         print(f"Cloudflare Credential: {cf_credential[:30]}...")
-        
-        # Test decryption
-        try:
-            if cf_username.startswith('encrypted:'):
-                decrypted_username = crypto_config.decrypt_credential(cf_username[10:])
-                print(f"Decrypted Username: {decrypted_username}")
-            if cf_credential.startswith('encrypted:'):
-                decrypted_credential = crypto_config.decrypt_credential(cf_credential[10:])
-                print(f"Decrypted Credential: {decrypted_credential[:10]}...")
-        except Exception as e:
-            print(f"Decryption failed: {e}")
     else:
-        print("No Cloudflare credentials set")
+        print("No Cloudflare credentials set in environment (using hardcoded values)")
+    
+    # Check additional TURN servers
+    turn_count = int(os.getenv('TURN_SERVER_COUNT', '0'))
+    if turn_count > 0:
+        print(f"Additional TURN servers configured: {turn_count}")
+        for i in range(turn_count):
+            server_key = f'TURN_SERVER_{i+1}'
+            urls = os.getenv(f'{server_key}_URLS', '')
+            username = os.getenv(f'{server_key}_USERNAME', '')
+            if urls and username:
+                print(f"  Server {i+1}: {username[:20]}...")
+    else:
+        print("No additional TURN servers configured")
+    
+    print()
+
+
+def test_server_ice_servers():
+    """Test server-side ICE server objects"""
+    print("=== Testing Server ICE Servers ===")
+    
+    servers = ice_config.get_server_ice_servers()
+    print(f"Server ICE Servers: {len(servers)}")
+    
+    for i, server in enumerate(servers):
+        print(f"  Server {i+1}: {server.urls}")
+        if hasattr(server, 'username') and server.username:
+            print(f"    Username: {server.username[:20]}...")
+        if hasattr(server, 'credential') and server.credential:
+            print(f"    Credential: {server.credential[:20]}...")
     
     print()
 
@@ -128,10 +111,10 @@ def main():
     
     try:
         test_basic_configuration()
-        test_encryption()
         test_validation()
         test_configuration_summary()
         test_with_environment_variables()
+        test_server_ice_servers()
         
         print("✓ All tests completed successfully!")
         

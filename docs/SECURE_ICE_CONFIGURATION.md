@@ -1,45 +1,36 @@
-# Secure ICE Server Configuration
+# ICE Server Configuration
 
-This document describes how to configure and use the secure ICE server configuration system in XiaoZhi WebRTC.
+This document describes how to configure and use the ICE server configuration system in XiaoZhi WebRTC.
 
 ## Overview
 
-The secure ICE configuration system provides:
-- Environment variable-based configuration
-- Encrypted credential storage
-- Client-side credential decryption
+The ICE configuration system provides:
+- Hardcoded Cloudflare TURN server configuration
+- Environment variable-based configuration for additional servers
 - Support for multiple TURN servers
 - Comprehensive validation
 
 ## Quick Start
 
-### 1. Generate Master Key
+### 1. Default Configuration
 
-```bash
-python scripts/manage_ice_credentials.py generate-key
+The Cloudflare TURN server is now hardcoded in the application with the following configuration:
+
+```json
+{
+  "urls": [
+    "turn:turn.cloudflare.com:3478?transport=udp",
+    "turn:turn.cloudflare.com:3478?transport=tcp",
+    "turns:turn.cloudflare.com:5349?transport=tcp"
+  ],
+  "username": "c682c16159f88382fcee1dfc6161bca4",
+  "credential": "813b143a66f601f9e651920617c7cd2188437ab3172c12bdc146e4ad004a5fca"
+}
 ```
 
-This will output a master key like:
-```
-New Master Key: gAAAAABh...
-Set this as ICE_MASTER_KEY environment variable
-```
+### 2. Add Additional TURN Servers (Optional)
 
-### 2. Encrypt Your Credentials
-
-For Cloudflare TURN servers:
-```bash
-python scripts/manage_ice_credentials.py cloudflare your_username your_password
-```
-
-For custom TURN servers:
-```bash
-python scripts/manage_ice_credentials.py encrypt your_username your_password --server-name "My TURN Server" --urls "turn:your-server.com:3478?transport=udp,turn:your-server.com:3478?transport=tcp"
-```
-
-### 3. Configure Environment Variables
-
-Create a `.env` file with your configuration:
+If you need additional TURN servers, you can configure them using environment variables:
 
 ```bash
 # Copy the example file
@@ -49,23 +40,24 @@ cp env.example .env
 nano .env
 ```
 
-Example `.env` file:
+Example `.env` file for additional TURN servers:
 ```bash
-ICE_MASTER_KEY=gAAAAABh...
-CLOUDFLARE_TURN_USERNAME=encrypted:gAAAAABh...
-CLOUDFLARE_TURN_CREDENTIAL=encrypted:gAAAAABh...
+TURN_SERVER_COUNT=1
+TURN_SERVER_1_URLS=turn:your-server.com:3478?transport=udp,turn:your-server.com:3478?transport=tcp
+TURN_SERVER_1_USERNAME=your_username
+TURN_SERVER_1_CREDENTIAL=your_password
 ```
 
-### 4. Set Client-Side Master Key
+### 3. Test the Configuration
 
-In your HTML files, set the master key for client-side decryption:
+Test the ICE configuration:
 
-```javascript
-// Option 1: Set as global variable
-window.ICE_MASTER_KEY = 'your_master_key_here';
+```bash
+# Test the configuration
+python scripts/test_ice_config.py
 
-// Option 2: Store in localStorage
-localStorage.setItem('ice_master_key', 'your_master_key_here');
+# Run the demo
+python scripts/demo_ice_config.py
 ```
 
 ## Configuration Options
@@ -74,13 +66,10 @@ localStorage.setItem('ice_master_key', 'your_master_key_here');
 
 | Variable | Description | Required | Example |
 |----------|-------------|----------|---------|
-| `ICE_MASTER_KEY` | Master encryption key | Yes | `gAAAAABh...` |
-| `CLOUDFLARE_TURN_USERNAME` | Cloudflare TURN username (encrypted) | No | `encrypted:gAAAAABh...` |
-| `CLOUDFLARE_TURN_CREDENTIAL` | Cloudflare TURN password (encrypted) | No | `encrypted:gAAAAABh...` |
 | `TURN_SERVER_COUNT` | Number of additional TURN servers | No | `2` |
 | `TURN_SERVER_N_URLS` | URLs for TURN server N | No | `turn:server.com:3478?transport=udp` |
-| `TURN_SERVER_N_USERNAME` | Username for TURN server N (encrypted) | No | `encrypted:gAAAAABh...` |
-| `TURN_SERVER_N_CREDENTIAL` | Password for TURN server N (encrypted) | No | `encrypted:gAAAAABh...` |
+| `TURN_SERVER_N_USERNAME` | Username for TURN server N | No | `your_username` |
+| `TURN_SERVER_N_CREDENTIAL` | Password for TURN server N | No | `your_password` |
 
 ### TURN Server URL Formats
 
@@ -141,35 +130,30 @@ validation = ice_config.validate_configuration()
 summary = ice_config.get_configuration_summary()
 ```
 
-### CryptoConfig Class
+### ICE Configuration Usage
 
 ```python
-from src.config.crypto_config import crypto_config
+from src.config.ice_config import ice_config
 
-# Encrypt credentials
-encrypted = crypto_config.encrypt_credential("my_password")
+# Get ICE configuration for frontend
+config = ice_config.get_ice_config()
 
-# Decrypt credentials
-decrypted = crypto_config.decrypt_credential(encrypted)
+# Get ICE servers for server-side use
+servers = ice_config.get_server_ice_servers()
 
-# Generate encrypted credentials
-username, password = crypto_config.generate_encrypted_credentials("user", "pass")
+# Validate configuration
+validation = ice_config.validate_configuration()
 ```
 
 ### Client-side JavaScript
 
 ```javascript
-// Initialize crypto utility
-await window.iceCrypto.init(masterKey);
+// Get ICE configuration from server
+const resp = await fetch('/api/ice');
+const iceConfig = await resp.json();
 
-// Decrypt credentials
-const decrypted = window.iceCrypto.decryptCredential(encryptedCredential);
-
-// Process ICE servers
-const processedServers = window.iceCrypto.processIceServers(iceServers);
-
-// Get decrypted ICE configuration
-const config = await getDecryptedIceConfig(masterKey);
+// Create RTCPeerConnection with ICE configuration
+const pc = new RTCPeerConnection(iceConfig);
 ```
 
 ## Management Script
@@ -179,29 +163,18 @@ The `scripts/manage_ice_credentials.py` script provides utilities for managing c
 ### Commands
 
 ```bash
-# Generate new master key
-python scripts/manage_ice_credentials.py generate-key
-
-# Encrypt credentials
-python scripts/manage_ice_credentials.py encrypt username password --server-name "My Server" --urls "turn:server.com:3478"
-
-# Decrypt credentials
-python scripts/manage_ice_credentials.py decrypt encrypted_username encrypted_password
-
-# Generate Cloudflare configuration
+# Generate Cloudflare TURN configuration
 python scripts/manage_ice_credentials.py cloudflare username password
+
+# Generate custom TURN server configuration
+python scripts/manage_ice_credentials.py custom username password --urls "turn:server.com:3478" --server-name "My Server"
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Decryption fails on client-side**:
-   - Verify master key is set correctly
-   - Check that CryptoJS library is loaded
-   - Ensure encrypted credentials are properly formatted
-
-2. **TURN servers not working**:
+1. **TURN servers not working**:
    - Verify credentials are correct
    - Check URL formats
    - Test with unencrypted credentials first

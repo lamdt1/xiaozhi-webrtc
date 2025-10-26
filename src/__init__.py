@@ -98,6 +98,8 @@ async def offer(request):
     ice_servers = ice_config.get_server_ice_servers()
     configuration = RTCConfiguration(iceServers=ice_servers)
     pc = RTCPeerConnection(configuration=configuration)
+    logger.info("ICE servers: %s", ice_servers)
+    logger.info("ICE server configuration: %s", configuration)
     pcs.add(pc)
 
     # Store client IP in the peer connection object

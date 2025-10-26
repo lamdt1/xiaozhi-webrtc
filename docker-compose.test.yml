@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  xiaozhi-webrtc-test:
+    build: .
+    ports:
+      - "51001:51000"
+    environment:
+      - PORT=51000
+      - ICE_MASTER_KEY=${ICE_MASTER_KEY}
+      - CLOUDFLARE_TURN_USERNAME=${CLOUDFLARE_TURN_USERNAME}
+      - CLOUDFLARE_TURN_CREDENTIAL=${CLOUDFLARE_TURN_CREDENTIAL}
+      - TURN_SERVER_COUNT=0
+    volumes:
+      - ./test-results:/app/test-results
+      - ./tests:/app/tests
+    networks:
+      - webrtc-test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:51000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  test-runner:
+    image: node:18-alpine
+    volumes:
+      - ./tests:/tests
+      - ./test-results:/test-results
+      - ./src:/src
+    working_dir: /tests
+    command: >
+      sh -c "
+        npm init -y &&
+        npm install --save-dev jest @testing-library/jest-dom &&
+        npm test -- --coverage --coverageDirectory=/test-results/coverage
+      "
+    depends_on:
+      xiaozhi-webrtc-test:
+        condition: service_healthy
+    networks:
+      - webrtc-test-network
+
+  selenium-hub:
+    image: selenium/hub:4.15.0
+    ports:
+      - "4444:4444"
+    networks:
+      - webrtc-test-network
+
+  chrome:
+    image: selenium/node-chrome:4.15.0
+    shm_size: 2gb
+    environment:
+      - HUB_HOST=selenium-hub
+      - NODE_MAX_INSTANCES=2
+      - NODE_MAX_SESSION=2
+    depends_on:
+      - selenium-hub
+    networks:
+      - webrtc-test-network
+
+  firefox:
+    image: selenium/node-firefox:4.15.0
+    shm_size: 2gb
+    environment:
+      - HUB_HOST=selenium-hub
+      - NODE_MAX_INSTANCES=2
+      - NODE_MAX_SESSION=2
+    depends_on:
+      - selenium-hub
+    networks:
+      - webrtc-test-network
+
+  browser-test-runner:
+    image: node:18-alpine
+    volumes:
+      - ./tests:/tests
+      - ./test-results:/test-results
+      - ./src:/src
+    working_dir: /tests
+    environment:
+      - SELENIUM_HUB_URL=http://selenium-hub:4444
+      - TEST_APP_URL=http://xiaozhi-webrtc-test:51000
+    command: >
+      sh -c "
+        npm init -y &&
+        npm install --save-dev selenium-webdriver &&
+        node browser-tests.js
+      "
+    depends_on:
+      - xiaozhi-webrtc-test
+      - selenium-hub
+      - chrome
+      - firefox
+    networks:
+      - webrtc-test-network
+
+networks:
+  webrtc-test-network:
+    driver: bridge

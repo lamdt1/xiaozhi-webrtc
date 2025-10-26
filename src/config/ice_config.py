@@ -4,13 +4,11 @@ from typing import Any, Dict, List, Optional
 
 from aiortc import RTCIceServer
 
-from .crypto_config import crypto_config
-
 logger = logging.getLogger(__name__)
 
 
 class ICEConfig:
-    """ICE server configuration management class with secure credential support"""
+    """ICE server configuration management class"""
 
     def __init__(self):
         # Default STUN servers
@@ -19,6 +17,7 @@ class ICEConfig:
             "stun:stun.l.google.com:19302",
             "stun:stun1.l.google.com:19302",
             "stun:stun.stunprotocol.org:3478",
+            "stun:stun.cloudflare.com:3478",
         ]
         
         # TURN server configuration from environment variables
@@ -28,30 +27,18 @@ class ICEConfig:
         """Load TURN server configurations from environment variables"""
         turn_servers = []
         
-        # Load Cloudflare TURN servers (from the provided configuration)
-        cf_username = os.getenv('CLOUDFLARE_TURN_USERNAME')
-        cf_credential = os.getenv('CLOUDFLARE_TURN_CREDENTIAL')
-        
-        if cf_username and cf_credential:
-            try:
-                # Decrypt credentials if they are encrypted
-                if cf_username.startswith('encrypted:'):
-                    cf_username = crypto_config.decrypt_credential(cf_username[10:])
-                if cf_credential.startswith('encrypted:'):
-                    cf_credential = crypto_config.decrypt_credential(cf_credential[10:])
-                
-                turn_servers.append({
-                    'urls': [
-                        "turn:turn.cloudflare.com:3478?transport=udp",
-                        "turn:turn.cloudflare.com:3478?transport=tcp",
-                        "turns:turn.cloudflare.com:5349?transport=tcp"
-                    ],
-                    'username': cf_username,
-                    'credential': cf_credential
-                })
-                logger.info("Loaded Cloudflare TURN server configuration")
-            except Exception as e:
-                logger.error(f"Failed to load Cloudflare TURN server: {e}")
+        # Add the provided Cloudflare TURN server configuration
+        turn_servers.append({
+            'urls': [
+                "stun:stun.cloudflare.com:3478",
+                "turn:turn.cloudflare.com:3478?transport=udp",
+                "turn:turn.cloudflare.com:3478?transport=tcp",
+                "turns:turn.cloudflare.com:5349?transport=tcp"
+            ],
+            'username': "c682c16159f88382fcee1dfc6161bca4",
+            'credential': "813b143a66f601f9e651920617c7cd2188437ab3172c12bdc146e4ad004a5fca"
+        })
+        logger.info("Loaded Cloudflare TURN server configuration")
         
         # Load additional TURN servers from environment
         turn_count = int(os.getenv('TURN_SERVER_COUNT', '0'))
@@ -63,12 +50,6 @@ class ICEConfig:
             
             if urls and username and credential:
                 try:
-                    # Decrypt credentials if they are encrypted
-                    if username.startswith('encrypted:'):
-                        username = crypto_config.decrypt_credential(username[10:])
-                    if credential.startswith('encrypted:'):
-                        credential = crypto_config.decrypt_credential(credential[10:])
-                    
                     turn_servers.append({
                         'urls': [url.strip() for url in urls if url.strip()],
                         'username': username,
@@ -81,36 +62,38 @@ class ICEConfig:
         return turn_servers
 
     def get_ice_config(self) -> Dict[str, Any]:
-        """Get frontend ICE configuration with encrypted credentials for client-side decryption"""
+        """Get frontend ICE configuration optimized for WebRTCManager"""
         ice_servers = []
 
         # Add default STUN servers
         for url in self.default_stun_urls:
             ice_servers.append({"urls": url})
 
-        # Add TURN servers with encrypted credentials for client-side decryption
+        # Add TURN servers with plain text credentials
         for turn_server in self.turn_servers:
-            # Encrypt credentials for client-side decryption
-            encrypted_username = crypto_config.encrypt_credential(turn_server['username'])
-            encrypted_credential = crypto_config.encrypt_credential(turn_server['credential'])
-            
             ice_servers.append({
                 "urls": turn_server['urls'],
-                "username": f"encrypted:{encrypted_username}",
-                "credential": f"encrypted:{encrypted_credential}"
+                "username": turn_server['username'],
+                "credential": turn_server['credential']
             })
 
-        return {"iceServers": ice_servers, "iceCandidatePoolSize": 10, "iceTransportPolicy": "all"}
+        return {
+            "iceServers": ice_servers, 
+            "iceCandidatePoolSize": 10, 
+            "iceTransportPolicy": "all",
+            "bundlePolicy": "max-bundle",
+            "rtcpMuxPolicy": "require"
+        }
 
     def get_server_ice_servers(self) -> List[RTCIceServer]:
-        """Get server-side ICE server objects with decrypted credentials"""
+        """Get server-side ICE server objects"""
         servers = []
 
         # Add default STUN servers
         for url in self.default_stun_urls:
             servers.append(RTCIceServer(urls=url))
 
-        # Add TURN servers with decrypted credentials
+        # Add TURN servers
         for turn_server in self.turn_servers:
             servers.append(RTCIceServer(
                 urls=turn_server['urls'],
@@ -119,6 +102,18 @@ class ICEConfig:
             ))
 
         return servers
+    
+    def get_webrtc_manager_config(self) -> Dict[str, Any]:
+        """Get configuration optimized for WebRTCManager class"""
+        ice_config = self.get_ice_config()
+        
+        return {
+            "iceServers": ice_config["iceServers"],
+            "iceCandidatePoolSize": ice_config["iceCandidatePoolSize"],
+            "bundlePolicy": ice_config["bundlePolicy"],
+            "iceTransportPolicy": ice_config["iceTransportPolicy"],
+            "rtcpMuxPolicy": ice_config["rtcpMuxPolicy"]
+        }
     
     def validate_configuration(self) -> Dict[str, Any]:
         """
