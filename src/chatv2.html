@@ -688,13 +688,11 @@
         window.chatApp = new Vue({
             el: '#app',
             data: {
-                pc: null,
                 localStream: null,
                 remoteStream: null,
                 isStarted: false,
                 isConnected: false,
                 status: null,
-                dataChannel: null,
                 messages: [],
                 open_xiaozhi_url: true,
                 maxMessages: 50,
@@ -1249,73 +1247,6 @@
                     // This method is kept for compatibility but functionality moved to setupWebRTCEventHandlers
                     console.log('Data channel setup delegated to WebRTCManager');
                 },
-                            if (data["type"] == "tts" && data["state"] == "sentence_start") {
-                                this.speakingState = "speaking";
-                            } else {
-                                this.speakingState = "listening";
-                            }
-                            if (data["type"] === "music") {
-                                this.playMusicUrl(data["url"]);
-                            }
-                            if (data["type"] === "websocket" && data["state"] === "close") {
-
-                                this.messages.push({"role": "assistant", "content": "Connection disconnected"});
-                                // this.dataChannel.close();
-                                // this.pc.close();
-                                // this.endAndBack();
-                                return;
-                            }
-                            if (data["type"] === "stt") {
-                                this.messages.push({ "role": "user", "content": data["text"] });
-                            } else if (data["type"] === "tts" && data["state"] === "sentence_start") {
-                                this.messages.push({ "role": "assistant", "content": data["text"] });
-                                if (data["text"].includes("Please login to the control panel to add device, enter verification code:") && this.open_xiaozhi_url) {
-                                    window.open("https://xiaozhi.me/console", "_blank");
-                                    this.open_xiaozhi_url = false;
-                                }
-                                const motion_list = [
-                                    ...Array(1).fill("Flick"),
-                                    ...Array(1).fill("FlickDown"),
-                                    ...Array(3).fill("FlickUp"),
-                                    ...Array(2).fill("Tap"),
-                                    ...Array(2).fill("Tap@Body"),
-                                    ...Array(1).fill("Flick@Body")
-                                ];
-                                // const motion_list = ["FlickUp"];
-
-                                const motion = motion_list[Math.floor(Math.random() * motion_list.length)];
-                                if (this.live2dManager) {
-                                    this.live2dManager.motion(motion);
-                                }
-
-                            } else if (data["type"] === "tool") {
-                                if (data["text"] === "set_volume") {
-                                    // Apply adaptive volume control's maximum volume limit
-                                    const requestedVolume = Math.max(0, Math.min(1, data["value"] / 100));
-                                    const finalVolume = this.adaptiveVolumeControl ?
-                                        Math.min(requestedVolume, this.maxVolume) : requestedVolume;
-                                    this.$refs.remoteVideo.volume = finalVolume;
-
-                                    // Ensure remote video also uses selected speaker device
-                                    this.applySpeakerDevice(this.$refs.remoteVideo);
-
-                                    console.log(`Set volume: requested=${requestedVolume.toFixed(2)}, actual=${finalVolume.toFixed(2)}`);
-                                } else if (data["text"] === "open_tab") {
-                                    window.open(data["value"], "_blank");
-                                } else if (data["text"] === "stop_music") {
-                                    this.stopMusic();
-                                }
-
-                            } else if (data["type"] === "llm") {
-                                console.log("llm:", data["text"]);
-                            } else if (data["type"] === "tts") {
-                            } else {
-                                console.log("unknown type:", data["type"]);
-                            }
-                            this.$nextTick(() => { this.scrollToBottom(); });
-                        };
-                    };
-                },
                 async start() {
                     if (this.webrtcManager) {
                         this.stop();
@@ -1435,18 +1366,66 @@
 
                 handleDataChannelMessage(data) {
                     // Handle incoming data channel messages
-                    this.messages.push(data);
-                    this.$nextTick(() => { this.scrollToBottom(); });
-                    
                     if (data.type === 'websocket' && data.state === 'close') {
-                        // Handle websocket close
-                    } else if (data.type === 'llm' && this.webrtcManager && this.webrtcManager.pc && this.webrtcManager.pc.video_track) {
-                        this.webrtcManager.pc.video_track.set_emoji(data.text);
-                    } else if (data.type === 'tts' && data.state === 'sentence_start') {
-                        this.speakingState = "speaking";
-                    } else {
-                        this.speakingState = "listening";
+                        this.messages.push({"role": "assistant", "content": "Connection disconnected"});
+                        return;
                     }
+                    
+                    if (data.type === 'stt') {
+                        this.messages.push({ "role": "user", "content": data.text });
+                    } else if (data.type === 'tts' && data.state === 'sentence_start') {
+                        this.messages.push({ "role": "assistant", "content": data.text });
+                        this.speakingState = "speaking";
+                        
+                        if (data.text && data.text.includes("Please login to the control panel to add device, enter verification code:") && this.open_xiaozhi_url) {
+                            window.open("https://xiaozhi.me/console", "_blank");
+                            this.open_xiaozhi_url = false;
+                        }
+                        
+                        // Trigger Live2D motion
+                        const motion_list = [
+                            ...Array(1).fill("Flick"),
+                            ...Array(1).fill("FlickDown"),
+                            ...Array(3).fill("FlickUp"),
+                            ...Array(2).fill("Tap"),
+                            ...Array(2).fill("Tap@Body"),
+                            ...Array(1).fill("Flick@Body")
+                        ];
+                        const motion = motion_list[Math.floor(Math.random() * motion_list.length)];
+                        if (this.live2dManager) {
+                            this.live2dManager.motion(motion);
+                        }
+                    } else if (data.type === 'tts') {
+                        this.speakingState = "listening";
+                    } else if (data.type === 'tool') {
+                        if (data.text === "set_volume") {
+                            // Apply adaptive volume control's maximum volume limit
+                            const requestedVolume = Math.max(0, Math.min(1, data.value / 100));
+                            const finalVolume = this.adaptiveVolumeControl ?
+                                Math.min(requestedVolume, this.maxVolume) : requestedVolume;
+                            this.$refs.remoteVideo.volume = finalVolume;
+
+                            // Ensure remote video also uses selected speaker device
+                            this.applySpeakerDevice(this.$refs.remoteVideo);
+
+                            console.log(`Set volume: requested=${requestedVolume.toFixed(2)}, actual=${finalVolume.toFixed(2)}`);
+                        } else if (data.text === "open_tab") {
+                            window.open(data.value, "_blank");
+                        } else if (data.text === "stop_music") {
+                            this.stopMusic();
+                        }
+                    } else if (data.type === 'music') {
+                        this.playMusicUrl(data.url);
+                    } else if (data.type === 'llm') {
+                        console.log("llm:", data.text);
+                        if (this.webrtcManager && this.webrtcManager.pc && this.webrtcManager.pc.video_track) {
+                            this.webrtcManager.pc.video_track.set_emoji(data.text);
+                        }
+                    } else {
+                        console.log("unknown type:", data.type);
+                    }
+                    
+                    this.$nextTick(() => { this.scrollToBottom(); });
                 },
                 stop() {
                     this.isStarted = false;
@@ -2014,7 +1993,7 @@
                     if (this.voiceMode !== 'push-to-talk') return;
                     // Try to unlock audio in user gesture's synchronous callback
                     this.unlockAudio();
-                    this.dataChannel.send(JSON.stringify({ type: "push-to-talk", state: "start" }));
+                    this.sendDataChannelMessage({ type: "push-to-talk", state: "start" });
 
                     // First try to trigger vibration in synchronous gesture callback to maximize success rate
                     if (this.canVibrateNow()) {

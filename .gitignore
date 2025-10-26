@@ -3,7 +3,7 @@ __pycache__/
 .DS_Store
 .venv/
 node_modules/
-**/node_modules/*
+**/node_modules/
 
 remote_dev.sh
 build_docker_image.sh
