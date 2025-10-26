@@ -1,0 +1,47 @@
+{
+  "name": "xiaozhi-webrtc-tests",
+  "version": "1.0.0",
+  "description": "Test suite for XiaoZhi WebRTC implementation",
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch",
+    "browser-tests": "node browser-tests.js",
+    "performance": "node performance-benchmark.js",
+    "all": "npm run test:coverage && npm run browser-tests && npm run performance"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.4",
+    "jest": "^29.7.0",
+    "puppeteer": "^21.5.0",
+    "selenium-webdriver": "^4.15.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.js"
+    ],
+    "collectCoverageFrom": [
+      "../src/webrtc_manager.js",
+      "!**/node_modules/**",
+      "!**/coverage/**"
+    ],
+    "coverageDirectory": "../test-results/coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ],
+    "testMatch": [
+      "**/*.test.js"
+    ],
+    "verbose": true
+  },
+  "main": "browser-tests.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "jest-environment-jsdom": "^30.2.0"
+  }
+}
