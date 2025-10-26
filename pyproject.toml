@@ -19,6 +19,7 @@ dependencies = [
     "opencv-python>=4.8.0",
     "aiortc>=1.13.0",
     "xiaozhi-sdk>=0.2.9",
+    "cryptography>=41.0.0",
 ]
 
 [project.optional-dependencies]

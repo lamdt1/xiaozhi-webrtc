@@ -481,12 +481,13 @@
     </div>
 
     <script>
+        window.ICE_MASTER_KEY = 'CzcyRIN9gXeC-kRFTyZmbR5sSXqATtOSMo3V3g7byB4=';
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {
                 navigator.serviceWorker.register('/static/service-worker.js').catch(function (e) {
                     console.log('ServiceWorker registration failed:', e);
                 });
-            });
+            });            
         }
         new Vue({
             el: '#app',

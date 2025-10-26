@@ -5,97 +5,97 @@
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-一个基于 **WebRTC** 的 AI 实时音视频互动项目，致力于打造你的专属、贴心且充满温度的情感伴侣。
+An AI real-time audio-video interaction project based on **WebRTC**, dedicated to creating your exclusive, caring and warm emotional companion.
 
 ---
 
-## ✨ 功能特性
-- **XiaoZhi 核心能力**：融合视觉多模态理解、智能问答与 MCP 控制，带来更强大的交互与处理能力。
-- **实时音视频沟通**：超低延迟与高清体验，让交流顺畅自然。
-- **Live2D 动态呈现**：拟真互动与沉浸式表现，提升亲和力与互动感。
+## ✨ Features
+- **XiaoZhi Core Capabilities**: Integrates visual multimodal understanding, intelligent Q&A and MCP control for more powerful interaction and processing capabilities.
+- **Real-time Audio-Video Communication**: Ultra-low latency and high-definition experience for smooth and natural communication.
+- **Live2D Dynamic Presentation**: Realistic interaction and immersive performance to enhance affinity and interactivity.
 ---
 
-## 🎯  在线体验
+## 🎯 Online Experience
 
 [https://xiaozhi.dairoot.cn](https://xiaozhi.dairoot.cn)
 
-> 💡 **提示**: 由于部署在海外服务器，访问会稍微卡顿（仅体验）
+> 💡 **Note**: Due to deployment on overseas servers, access may be slightly slow (experience only)
 
 https://github.com/user-attachments/assets/d985aacc-b07d-4874-a10a-c2139bd6c4bf
 
 ---
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
 ```bash
-# 克隆项目
+# Clone project
 git clone https://github.com/dairoot/xiaozhi-webrtc.git
 cd xiaozhi-webrtc
 ```
 
-#### 方法一：使用 uv（推荐）
+#### Method 1: Using uv (Recommended)
 
 ```bash
-# 安装 uv
+# Install uv
 pip install uv
 
-# 安装项目依赖
+# Install project dependencies
 uv sync
 
-# 运行项目
+# Run project
 uv run main.py
 ```
 
-#### 方法二：使用 Docker
+#### Method 2: Using Docker
 
 ```bash
-# 使用 Docker Compose 运行
+# Run with Docker Compose
 docker compose up
 ```
 
-#### 方法三：传统 pip 安装
+#### Method 3: Traditional pip installation
 
 ```bash
-# 创建虚拟环境
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
-# 或 venv\Scripts\activate  # Windows
+# or venv\Scripts\activate  # Windows
 
-# 安装依赖
+# Install dependencies
 pip install -e .
 
-# 运行项目
+# Run project
 python main.py
 ```
 ---
 
-## ⚙️ 部署要求
+## ⚙️ Deployment Requirements
 
-### 端口要求
+### Port Requirements
 
-WebRTC 需要以下端口用于实时音视频通信：
+WebRTC requires the following ports for real-time audio-video communication:
 
-| 端口 | 协议 | 用途 |
+| Port | Protocol | Purpose |
 |------|------|------|
-| 3478 | UDP | STUN 服务 |
-| 49152–65535 | UDP | WebRTC 媒体流端口（默认） |
+| 3478 | UDP | STUN Service |
+| 49152–65535 | UDP | WebRTC Media Stream Port (Default) |
 
-**注意：** 确保防火墙允许这些端口的通信，特别是在生产环境中部署时。
+**Note:** Ensure firewall allows communication on these ports, especially when deploying in production environments.
 
 
-### HTTPS 要求
+### HTTPS Requirements
 
-**线上环境必须使用 HTTPS**：WebRTC 需要访问摄像头和麦克风，现代浏览器出于安全考虑只允许在 HTTPS 环境下使用这些功能。
+**HTTPS must be used in production environments**: WebRTC needs access to cameras and microphones, and modern browsers only allow these features in HTTPS environments for security reasons.
 
-## 📖 使用说明
+## 📖 Usage Instructions
 
-1. **启动服务**: 运行项目后，服务将在 `http://localhost:51000` 或者 `https://yourdomain.com`  启动
-2. **访问页面**: 在浏览器中打开上述地址
-3. **授权权限**: 允许浏览器访问摄像头和麦克风
-4. **开始通信**: 点击开始按钮建立 WebRTC 连接
+1. **Start service**: After running the project, the service will start at `http://localhost:51000` or `https://yourdomain.com`
+2. **Access page**: Open the above address in a browser
+3. **Authorize permissions**: Allow the browser to access camera and microphone
+4. **Start communication**: Click the start button to establish WebRTC connection
 
-**注意**: 生产环境必须使用 HTTPS，否则 WebRTC 功能将无法正常工作。
+**Note**: HTTPS must be used in production environments, otherwise WebRTC functionality will not work properly.
 
 ---
-## 🫡 致敬
-- 虾哥 [xiaozhi-esp32](https://github.com/78/xiaozhi-esp32) 项目
+## 🫡 Acknowledgements
+- Xiaoge [xiaozhi-esp32](https://github.com/78/xiaozhi-esp32) project

@@ -9,6 +9,8 @@
     <link rel="manifest" href="/static/manifest.webmanifest">
     <meta name="theme-color" content="#f1e6aa">
     <script src="static/js/vue.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="static/js/ice-crypto.js"></script>
     <!-- Live2D Cubism Core -->
     <script src="static/js/live2dcubismcore.min.js"></script>
     <!-- PIXI.js -->
@@ -26,7 +28,7 @@
             background: #f1e6aa;
             color: #333;
             height: 100vh;
-            height: 100dvh; /* 动态视口高度，更适合移动端 */
+            height: 100dvh; /* Dynamic viewport height, better for mobile */
             overflow: hidden;
             position: fixed;
             width: 100%;
@@ -36,7 +38,7 @@
 
         #app {
             height: 100vh;
-            height: 100dvh; /* 动态视口高度 */
+            height: 100dvh; /* Dynamic viewport height */
             position: relative;
             overflow: hidden;
             width: 100%;
@@ -48,7 +50,7 @@
             left: 0;
             width: 100%;
             height: 100vh;
-            height: 100dvh; /* 动态视口高度 */
+            height: 100dvh; /* Dynamic viewport height */
             opacity: 1;
             transform: translateY(0);
             overflow: hidden;
@@ -57,7 +59,7 @@
         .chat-container {
             width: 100%;
             height: 100vh;
-            height: 100dvh; /* 动态视口高度 */
+            height: 100dvh; /* Dynamic viewport height */
             background: #f1e6aa;
             position: relative;
             overflow: hidden;
@@ -123,7 +125,7 @@
             display: none;
         }
 
-        /* 滚动指示器 */
+        /* Scroll indicator */
         .scroll-indicator {
             position: absolute;
             top: 8px;
@@ -148,7 +150,7 @@
             opacity: 1;
         }
 
-        /* 顶部最后一条消息预览（在隐藏消息容器时显示） */
+        /* Top last message preview (shown when message container is hidden) */
         .top-message-preview {
             position: fixed;
             top: 12px;
@@ -288,7 +290,7 @@
                 cursor: grabbing;
             }
 
-            /* 移动端消息容器样式调整 */
+            /* Mobile message container style adjustments */
             .message-bubbles-container {
                 width: 280px;
                 right: 10px;
@@ -311,7 +313,7 @@
                 border-radius: 16px;
             }
 
-            /* 确保移动端不出现滚动 */
+            /* Ensure no scrolling on mobile */
             html, body {
                 overflow: hidden !important;
                 position: fixed !important;
@@ -321,17 +323,17 @@
             }
 
             #app {
-                touch-action: pan-x pan-y; /* 允许水平和垂直平移，但防止缩放 */
+                touch-action: pan-x pan-y; /* Allow horizontal and vertical panning, but prevent zooming */
             }
 
-            /* 移动端允许 Live2D 画布接收触摸事件以支持跟手转头 */
+            /* Mobile allows Live2D canvas to receive touch events to support head tracking */
             #live2d-stage {
                 pointer-events: auto;
                 touch-action: none;
             }
         }
 
-        /* 隐藏状态的“把手”提示 */
+        /* Hidden state "handle" hint */
         .edge-handle {
             position: fixed;
             width: 28px;
@@ -361,7 +363,7 @@
             content: '›';
         }
 
-        /* 摄像头切换悬浮按钮 */
+        /* Camera switch floating button */
         .camera-switch-btn {
             position: fixed;
             width: 44px;
@@ -398,7 +400,7 @@
 
 
 
-        /* 摄像头不可用时的占位符 */
+        /* Camera placeholder when unavailable */
         .camera-placeholder {
             position: fixed;
             width: 240px;
@@ -440,7 +442,7 @@
             margin-top: 4px;
         }
 
-        /* 移动端摄像头占位符 */
+        /* Mobile camera placeholder */
         @media (max-width: 768px) {
             .camera-placeholder {
                 width: 135px;
@@ -454,7 +456,7 @@
 
         }
 
-        /* 音频模式指示器 */
+        /* Audio mode indicator */
         .audio-mode-indicator {
             position: fixed;
             top: 20px;
@@ -477,7 +479,7 @@
             font-size: 14px;
         }
 
-        /* 按住说话按钮样式 */
+        /* Push-to-talk button styles */
         .push-to-talk-container {
             position: fixed;
             bottom: 15%;
@@ -538,7 +540,7 @@
             line-height: 1.2;
         }
 
-        /* 移动端按住说话按钮样式调整 */
+        /* Mobile push-to-talk button style adjustments */
         @media (max-width: 768px) {
             .push-to-talk-container {
                 bottom: 18%;
@@ -593,13 +595,13 @@
                        :muted="true"
                        playsinline></video>
 
-                <!-- 摄像头切换按钮（跟随本地预览视频位置） -->
+                <!-- Camera switch button (follows local preview video position) -->
                 <div class="camera-switch-btn"
                      v-if="hasCamera && !(isEdgeHiddenLeft || isEdgeHiddenRight)"
                      :style="cameraSwitchBtnStyle"
                      @click="switchCamera"
                      @touchend.prevent="switchCamera">
-                    <!-- 简洁循环箭头相机图标 -->
+                    <!-- Simple circular arrow camera icon -->
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M9 7H8.17L6.59 5.41C6.21 5.03 5.7 4.8 5.17 4.8H4c-1.1 0-2 .9-2 2v8.4c0 1.1.9 2 2 2h7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M15 17h.83l1.58 1.59c.38.38.89.61 1.42.61H20c1.1 0 2-.9 2-2V8.8c0-1.1-.9-2-2-2h-7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -609,7 +611,7 @@
                 </div>
 
 
-                <!-- 按住说话按钮（固定在底部中央） -->
+                <!-- Push-to-talk button (fixed at bottom center) -->
                 <div class="push-to-talk-container" v-if="voiceMode === 'push-to-talk'">
                     <button class="push-to-talk-btn"
                             :class="{ active: isPushToTalkActive }"
@@ -641,7 +643,7 @@
 
 
 
-                <!-- 左右隐藏时显示的把手提示（不拦截事件） - 只在有摄像头时显示 -->
+                <!-- Handle hint shown when left/right hidden (does not intercept events) - only shown when camera is available -->
                 <div class="edge-handle" v-if="hasCamera && (isEdgeHiddenLeft || isEdgeHiddenRight)"
                      :class="{ left: isEdgeHiddenLeft, right: isEdgeHiddenRight }"
                      :style="edgeHandleStyle"
@@ -652,7 +654,7 @@
             <!-- Live2D Canvas -->
             <canvas id="live2d-stage"></canvas>
 
-            <!-- 顶部最后一条消息预览（当消息容器隐藏时显示） -->
+            <!-- Top last message preview (shown when message container is hidden) -->
             <div class="top-message-preview"
                  v-if="isMoreMessageHidden && lastMessageText">
                 {{ lastMessageText }}
@@ -1122,10 +1124,10 @@
                     if (this.isSwitchingCamera || !this.hasCamera) return;
                     this.isSwitchingCamera = true;
                     try {
-                        // 切换期望摄像头
+                        // Switch expected camera
                         this.preferredFacingMode = this.preferredFacingMode === 'user' ? 'environment' : 'user';
 
-                        // 获取新的视频流（保留原音频轨）
+                        // Get new video stream (preserve original audio track)
                         const newStream = await navigator.mediaDevices.getUserMedia({
                             video: {
                                 width: 640,
@@ -1136,16 +1138,16 @@
                         });
 
                         const newVideoTrack = newStream.getVideoTracks()[0];
-                        if (!newVideoTrack) throw new Error('未获取到新的视频轨道');
+                        if (!newVideoTrack) throw new Error('Failed to get new video track');
 
-                        // 替换到 RTCPeerConnection 中现有的视频发送器
+                        // Replace existing video sender in RTCPeerConnection
                         const senders = this.pc ? this.pc.getSenders() : [];
                         const videoSender = senders.find(s => s.track && s.track.kind === 'video');
                         if (videoSender) {
                             await videoSender.replaceTrack(newVideoTrack);
                         }
 
-                        // 替换本地预览（先停止旧的视频轨道）
+                        // Replace local preview (first stop old video track)
                         if (this.localStream) {
                             const oldVideoTracks = this.localStream.getVideoTracks();
                             oldVideoTracks.forEach(t => {
@@ -1155,15 +1157,15 @@
                             this.localStream.addTrack(newVideoTrack);
                         }
 
-                        // 更新 video 元素
+                        // Update video element
                         const localVideo = this.$refs.localVideo;
                         if (localVideo) {
                             localVideo.srcObject = this.localStream;
-                            // 前置镜像，后置不镜像
+                            // Front camera mirror, back camera no mirror
                             localVideo.style.transform = this.preferredFacingMode === 'user' ? 'scaleX(-1)' : 'none';
                         }
 
-                        // 释放临时流中非使用的轨道
+                        // Release unused tracks in temporary stream
                         newStream.getTracks().forEach(t => {
                             if (t !== newVideoTrack) t.stop();
                         });
@@ -1171,7 +1173,7 @@
                         console.error('Failed to switch camera:', err);
                         this.messages.push({
                             role: "assistant",
-                            content: `摄像头切换失败: ${this.getCameraErrorMessage(err)}`
+                            content: `Camera switch failed: ${this.getCameraErrorMessage(err)}`
                         });
                         this.$nextTick(() => { this.scrollToBottom(); });
                     } finally {
@@ -1183,7 +1185,7 @@
                     this.$nextTick(() => {
                         const container = document.querySelector('.message-bubbles-container');
                         if (container && !this.isMoreMessageHidden) {
-                            // 平滑滚动到底部
+                            // Smooth scroll to bottom
                             container.scrollTo({
                                 top: container.scrollHeight,
                                 behavior: 'smooth'
@@ -1203,21 +1205,21 @@
                 },
 
                 handleMessageScroll(event) {
-                    // 滚动时更新滚动状态
+                    // Update scroll state when scrolling
                     this.checkScrollableContent();
                 },
                 async negotiate() {
                     try {
                         if (!this.pc) return;
 
-                        // 创建 offer
+                        // Create offer
                         const offer = await this.pc.createOffer();
                         if (!this.pc) return;
 
                         await this.pc.setLocalDescription(offer);
 
-                        // 优化：不等待ICE收集完成，直接发送offer
-                        // 这可以显著减少连接建立时间
+                        // Optimization: don't wait for ICE gathering to complete, send offer directly
+                        // This can significantly reduce connection establishment time
 
                         if (!this.pc) return;
                         this.isLoadingOffer = true;
@@ -1248,7 +1250,7 @@
                     this.dataChannel = this.pc.createDataChannel('chat');
                     this.dataChannel.onopen = () => {
                         console.log('Data channel is open');
-                        // 连接建立后发送注册信息
+                        // Send registration information after connection is established
                         this.dataChannel.send(JSON.stringify({type: "register", macAddress: this.macAddress}));
 
                     };
@@ -1272,7 +1274,7 @@
                             }
                             if (data["type"] === "websocket" && data["state"] === "close") {
 
-                                this.messages.push({"role": "assistant", "content": "连接已断开"});
+                                this.messages.push({"role": "assistant", "content": "Connection disconnected"});
                                 // this.dataChannel.close();
                                 // this.pc.close();
                                 // this.endAndBack();
@@ -1282,7 +1284,7 @@
                                 this.messages.push({ "role": "user", "content": data["text"] });
                             } else if (data["type"] === "tts" && data["state"] === "sentence_start") {
                                 this.messages.push({ "role": "assistant", "content": data["text"] });
-                                if (data["text"].includes("请登录到控制面板添加设备，输入验证码：") && this.open_xiaozhi_url) {
+                                if (data["text"].includes("Please login to the control panel to add device, enter verification code:") && this.open_xiaozhi_url) {
                                     window.open("https://xiaozhi.me/console", "_blank");
                                     this.open_xiaozhi_url = false;
                                 }
@@ -1303,13 +1305,13 @@
 
                             } else if (data["type"] === "tool") {
                                 if (data["text"] === "set_volume") {
-                                    // 应用自适应音量控制的最大音量限制
+                                    // Apply adaptive volume control's maximum volume limit
                                     const requestedVolume = Math.max(0, Math.min(1, data["value"] / 100));
                                     const finalVolume = this.adaptiveVolumeControl ?
                                         Math.min(requestedVolume, this.maxVolume) : requestedVolume;
                                     this.$refs.remoteVideo.volume = finalVolume;
 
-                                    // 确保远程视频也使用选择的扬声器设备
+                                    // Ensure remote video also uses selected speaker device
                                     this.applySpeakerDevice(this.$refs.remoteVideo);
 
                                     console.log(`Set volume: requested=${requestedVolume.toFixed(2)}, actual=${finalVolume.toFixed(2)}`);
@@ -1334,13 +1336,28 @@
                         this.stop();
                     }
 
-                    // 在创建 RTCPeerConnection 前获取服务端 ICE 配置
+                    // Get server ICE configuration and decrypt credentials before creating RTCPeerConnection
                     let iceConfig = { iceServers: [], iceCandidatePoolSize: 0 };
                     try {
                         const resp = await fetch('/api/ice');
                         const data = await resp.json();
                         iceConfig = data;
-                        // console.log('从服务器获取ICE配置:', iceConfig);
+                        // console.log('Get ICE configuration from server:', iceConfig);
+                        
+                        // Decrypt credentials (if master key is available)
+                        const masterKey = window.ICE_MASTER_KEY || localStorage.getItem('ice_master_key');
+                        if (masterKey && window.iceCrypto) {
+                            try {
+                                await window.iceCrypto.init(masterKey);
+                                iceConfig.iceServers = window.iceCrypto.processIceServers(iceConfig.iceServers);
+                                console.log('ICE credentials decrypted successfully');
+                            } catch (e) {
+                                console.warn('ICE credentials decryption failed:', e);
+                            }
+                        } else {
+                            console.warn('ICE master key not found, using encrypted credentials');
+                        }
+                        
                         if (!iceConfig.iceServers || iceConfig.iceServers.length === 0) {
                             console.warn('No ICE servers configured, only supports LAN direct connection');
                         } else {
@@ -1354,21 +1371,21 @@
                     this.pc = new RTCPeerConnection(iceConfig);
                     this.status = "connecting...";
                     this.setupDataChannel();
-                    // 添加音频轨道
+                    // Add audio track
                     this.localStream.getAudioTracks().forEach(track => {
-                        // 在按住说话模式下，初始时禁用音频轨道
+                        // In push-to-talk mode, initially disable audio track
                         if (this.voiceMode === 'push-to-talk') {
                             track.enabled = false;
                         }
                         this.pc.addTrack(track, this.localStream);
                     });
 
-                    // 只在有摄像头时添加视频轨道
+                    // Only add video track when camera is available
                     if (this.hasCamera) {
                         this.localStream.getVideoTracks().forEach(track => { this.pc.addTrack(track, this.localStream); });
                     }
                     this.pc.addEventListener('track', (evt) => {
-                        // 只处理音频轨道，忽略视频轨道
+                        // Only process audio tracks, ignore video tracks
                         if (evt.track.kind === 'audio') {
                             this.remoteStream = evt.streams[0];
                             this.$nextTick(() => { this.assignVideoStreams(); });
@@ -1383,12 +1400,12 @@
                             this.isLoadingOffer = false;
                             this.$nextTick(() => {
                                 this.assignVideoStreams();
-                                // 启动自适应音量控制
+                                // Start adaptive volume control
                                 this.startAdaptiveVolumeControl();
                             });
                         } else if (this.pc.connectionState === 'failed') {
                             console.error('PeerConnection failed');
-                            alert('连接失败，可能需要配置 STUN/TURN 服务端');
+                            alert('Connection failed, may need to configure STUN/TURN server');
                         } else if (this.pc.connectionState === 'disconnected') {
                             console.warn('PeerConnection disconnected');
                         }
@@ -1403,7 +1420,7 @@
                         // console.log('Signaling state:', this.pc.signalingState);
                     });
                     this.isStarted = true;
-                    // 立即发起协商
+                    // Immediately initiate negotiation
                     this.negotiate();
                 },
                 stop() {
@@ -1416,7 +1433,7 @@
                     if (this.dataChannel) { this.dataChannel.close(); this.dataChannel = null; }
                     if (this.pc) { this.pc.close(); this.pc = null; }
 
-                    // 清理 Live2D 管理器
+                    // Clean up Live2D manager
                     if (this.live2dManager) {
                         this.live2dManager.destroy();
                         this.live2dManager = null;
@@ -1432,7 +1449,7 @@
                     const localVideo = this.$refs.localVideo;
                     if (!remoteVideo) { return; }
 
-                    // 只在有摄像头时处理本地视频
+                    // Only process local video when camera is available
                     if (localVideo && this.hasCamera) {
                         localVideo.style.display = 'block';
                     }
@@ -1441,27 +1458,27 @@
                         remoteVideo.srcObject = this.remoteStream;
                         remoteVideo.style.transform = 'none';
 
-                        // 应用选择的扬声器设备
+                        // Apply selected speaker device
                         this.applySpeakerDevice(remoteVideo);
 
-                        // 初始化音频分析器
+                        // Initialize audio analyzer
                         if (this.live2dManager) {
                             this.live2dManager.initializeAudioAnalyzer(this.remoteStream);
                         }
                     }
 
-                    // 只在有摄像头和本地视频元素存在时设置本地流
+                    // Only set local stream when camera and local video element exist
                     if (this.localStream && localVideo && this.hasCamera) {
                         localVideo.srcObject = this.localStream;
-                        // 前置镜像，后置不镜像
+                        // Front camera mirror, back camera no mirror
                         localVideo.style.transform = this.preferredFacingMode === 'user' ? 'scaleX(-1)' : 'none';
                     }
                 },
-                // 解锁移动端音频播放能力，并在解锁后自动播放排队的音乐
+                // Unlock mobile audio playback capability and automatically play queued music after unlocking
                 unlockAudio() {
                     if (this.audioUnlocked) return;
                     try {
-                        // 已存在的远端音频流绑定到 WebAudio 以触发解锁
+                        // Bind existing remote audio stream to WebAudio to trigger unlock
                         if (!this._audioCtx) {
                             const AudioCtx = window.AudioContext || window.webkitAudioContext;
                             if (AudioCtx) {
@@ -1471,7 +1488,7 @@
                         if (this._audioCtx && this._audioCtx.state === 'suspended') {
                             this._audioCtx.resume().catch(() => {});
                         }
-                        // 通过短静音播放进一步“解锁”iOS
+                        // Further "unlock" iOS through short silent playback
                         const silent = new Audio();
                         silent.src = 'data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAA';
                         silent.volume = 0;
@@ -1480,11 +1497,11 @@
                         this.audioUnlocked = true;
                         this.drainPendingMusicQueue();
                     } catch (_) {
-                        // 若失败，提示一次
+                        // If failed, prompt once
                         this.promptAudioUnlockMessageOnce();
                     }
                 },
-                // 播放排队中的音乐
+                // Play queued music
                 drainPendingMusicQueue() {
                     if (!this.audioUnlocked) return;
                     if (!this.pendingMusicQueue || this.pendingMusicQueue.length === 0) return;
@@ -1492,7 +1509,7 @@
                     this.pendingMusicQueue = [];
                     queue.forEach(url => this.playMusicUrl(url));
                 },
-                // 仅提示一次需要用户交互来解锁音频
+                // Only prompt once for user interaction to unlock audio
                 promptAudioUnlockMessageOnce() {
                     if (this.hasShownAudioUnlockTip) return;
                     this.hasShownAudioUnlockTip = true;
@@ -1504,7 +1521,7 @@
                 },
                 playMusicUrl(url) {
                     try {
-                        // 若尚未解锁，先入队，提示一次
+                        // If not yet unlocked, queue first, prompt once
                         if (!this.audioUnlocked) {
                             this.pendingMusicQueue.push(url);
                             this.promptAudioUnlockMessageOnce();
@@ -1521,7 +1538,7 @@
                         audio.preload = 'auto';
                         audio.volume = 0.8;
 
-                        // 应用选择的扬声器设备
+                        // Apply selected speaker device
                         this.applySpeakerDevice(audio);
 
                         this.currentAudio = audio;
@@ -1558,12 +1575,12 @@
                     }
                 },
 
-                // 应用选择的扬声器设备到音频元素
+                // Apply selected speaker device to audio element
                 applySpeakerDevice(audioElement) {
                     if (!this.selectedSpeakerDeviceId || !audioElement) return;
 
                     try {
-                        // 检查浏览器是否支持 setSinkId
+                        // Check if browser supports setSinkId
                         if ('setSinkId' in audioElement) {
                             audioElement.setSinkId(this.selectedSpeakerDeviceId)
                                 .then(() => {
@@ -1580,34 +1597,34 @@
                     }
                 },
 
-                // 自适应音量控制
+                // Adaptive volume control
                 adjustVolumeBasedOnEcho() {
                     if (!this.adaptiveVolumeControl || !this.$refs.remoteVideo) return;
 
                     const now = Date.now();
-                    // 限制调整频率，避免过于频繁的音量变化
+                    // Limit adjustment frequency to avoid too frequent volume changes
                     if (now - this.lastVolumeAdjustTime < 500) return;
 
                     const currentVolume = this.$refs.remoteVideo.volume;
                     let newVolume = currentVolume;
 
-                    // 检测音频强度，如果过高可能导致回声
+                    // Detect audio intensity, if too high may cause echo
                     if (this.live2dManager && this.live2dManager.analyser && this.live2dManager.dataArray) {
                         this.live2dManager.analyser.getByteFrequencyData(this.live2dManager.dataArray);
                         const average = this.live2dManager.dataArray.reduce((a, b) => a + b) / this.live2dManager.dataArray.length;
                         const normalizedLevel = average / 255;
 
-                        // 如果音频强度过高，降低音量
+                        // If audio intensity is too high, reduce volume
                         if (normalizedLevel > this.echoDetectionThreshold && currentVolume > 0.3) {
                             newVolume = Math.max(0.3, currentVolume - this.volumeAdjustmentRate);
                             console.log(`Detected high audio intensity (${normalizedLevel.toFixed(2)}), reducing volume to ${newVolume.toFixed(2)}`);
                         }
-                        // 如果音频强度适中且音量较低，适当提高音量
+                        // If audio intensity is moderate and volume is low, appropriately increase volume
                         else if (normalizedLevel < 0.4 && currentVolume < this.maxVolume) {
                             newVolume = Math.min(this.maxVolume, currentVolume + this.volumeAdjustmentRate * 0.5);
                         }
 
-                        // 应用新音量
+                        // Apply new volume
                         if (Math.abs(newVolume - currentVolume) > 0.01) {
                             this.$refs.remoteVideo.volume = newVolume;
                             this.lastVolumeAdjustTime = now;
@@ -1615,17 +1632,17 @@
                     }
                 },
 
-                // 启动自适应音量控制监控
+                // Start adaptive volume control monitoring
                 startAdaptiveVolumeControl() {
                     if (!this.adaptiveVolumeControl) return;
 
-                    // 每秒检查一次音量调整
+                    // Check volume adjustment once per second
                     setInterval(() => {
                         this.adjustVolumeBasedOnEcho();
                     }, 1000);
                 },
 
-                // 触摸拖拽事件处理
+                // Touch drag event handling
                 handleTouchStart(event) {
                     event.preventDefault();
                     const touch = event.touches[0];
@@ -1644,7 +1661,7 @@
                     this.endDrag();
                 },
 
-                // 鼠标拖拽事件处理（用于桌面端测试）
+                // Mouse drag event handling (for desktop testing)
                 handleMouseDown(event) {
                     event.preventDefault();
                     this.startDrag(event.clientX, event.clientY);
@@ -1674,7 +1691,7 @@
                     document.removeEventListener('mouseup', this.handleDocumentMouseUp);
                 },
 
-                // 点击把手从隐藏边弹回可见边
+                // Click handle to bounce back from hidden edge to visible edge
                 revealFromEdge() {
                     const video = this.$refs.localVideo;
                     if (!video) return;
@@ -1685,16 +1702,16 @@
 
                     let targetX = this.videoPosition.x;
                     if (this.isEdgeHiddenLeft) {
-                        // 从左侧隐藏恢复到左可见边
+                        // Restore from left hidden to left visible edge
                         targetX = 0;
                     } else if (this.isEdgeHiddenRight) {
-                        // 从右侧隐藏恢复到右可见边
+                        // Restore from right hidden to right visible edge
                         targetX = windowWidth - videoWidth;
                     }
                     this.videoPosition = { x: targetX, y: this.videoPosition.y };
                 },
 
-                // 拖拽核心逻辑
+                // Drag core logic
                 startDrag(clientX, clientY) {
                     this.isDragging = true;
                     const video = this.$refs.localVideo;
@@ -1714,29 +1731,29 @@
                     const video = this.$refs.localVideo;
                     if (!video) return;
 
-                    // 计算新位置
+                    // Calculate new position
                     let newX = clientX - this.videoOffset.x;
                     let newY = clientY - this.videoOffset.y;
 
-                    // 获取视频尺寸
+                    // Get video dimensions
                     const videoRect = video.getBoundingClientRect();
                     const videoWidth = videoRect.width;
                     const videoHeight = videoRect.height;
 
-                    // 获取窗口尺寸
+                    // Get window dimensions
                     const windowWidth = window.innerWidth;
                     const windowHeight = window.innerHeight;
 
-                    // 边界约束（允许左右超出屏幕，只保留 edgePeekWidth 把手）
-                    const minX = -videoWidth + this.edgePeekWidth; // 最多隐藏到只剩把手
-                    const maxX = windowWidth - this.edgePeekWidth;  // 右侧同理
+                    // Boundary constraints (allow left/right to exceed screen, only keep edgePeekWidth handle)
+                    const minX = -videoWidth + this.edgePeekWidth; // Maximum hide to only leave handle
+                    const maxX = windowWidth - this.edgePeekWidth;  // Same for right side
                     const minY = 0;
                     const maxY = windowHeight - videoHeight;
 
                     newX = Math.max(minX, Math.min(newX, maxX));
                     newY = Math.max(minY, Math.min(newY, maxY));
 
-                    // 更新位置
+                    // Update position
                     this.videoPosition = { x: newX, y: newY };
                 },
 
@@ -1757,23 +1774,23 @@
                     const leftHiddenEdge = -videoWidth + this.edgePeekWidth;
                     const rightHiddenEdge = windowWidth - this.edgePeekWidth;
 
-                    // 根据当前位置吸附到“可见边”或“隐藏边”（把手）
+                    // Snap to "visible edge" or "hidden edge" (handle) based on current position
                     if (x < leftVisibleEdge) {
-                        // 左侧越界：根据与可见边距离决定吸附到可见或隐藏
+                        // Left out of bounds: decide to snap to visible or hidden based on distance to visible edge
                         if (Math.abs(x - leftVisibleEdge) <= this.edgeSnapThreshold) {
-                            x = leftVisibleEdge; // 回到完全可见
+                            x = leftVisibleEdge; // Return to fully visible
                         } else {
-                            x = leftHiddenEdge; // 吸附到隐藏位置，仅留把手
+                            x = leftHiddenEdge; // Snap to hidden position, only leave handle
                         }
                     } else if (x > rightVisibleEdge) {
-                        // 右侧越界
+                        // Right out of bounds
                         if (Math.abs(x - rightVisibleEdge) <= this.edgeSnapThreshold) {
-                            x = rightVisibleEdge; // 回到完全可见
+                            x = rightVisibleEdge; // Return to fully visible
                         } else {
-                            x = rightHiddenEdge; // 吸附到隐藏位置
+                            x = rightHiddenEdge; // Snap to hidden position
                         }
                     } else {
-                        // 在可视范围内（未隐藏），结束时吸附到最近的左右可见边
+                        // In visible range (not hidden), snap to nearest left/right visible edge when ending
                         const distanceToLeft = x - leftVisibleEdge;
                         const distanceToRight = rightVisibleEdge - x;
                         if (distanceToLeft <= distanceToRight) {
@@ -1786,19 +1803,19 @@
                     this.videoPosition = { x, y: this.videoPosition.y };
                 },
 
-                // 设置初始视频位置
+                // Set initial video position
                 setInitialVideoPosition() {
-                    // 检查是否为移动设备
+                    // Check if it's a mobile device
                     const isMobile = window.innerWidth <= 768;
 
                     if (isMobile) {
-                        // 手机端：默认位置在右上角
+                        // Mobile: default position in top-right corner
                         this.videoPosition = {
                             x: window.innerWidth - 135 - 16,
                             y: 16
                         };
                     } else {
-                        // 桌面端：默认位置在左下角
+                        // Desktop: default position in bottom-left corner
                         this.videoPosition = {
                             x: 16,
                             y: window.innerHeight - 135 - 16
@@ -1806,23 +1823,23 @@
                     }
                 },
 
-                // 处理窗口大小变化
+                // Handle window size changes
                 handleWindowResize() {
                     this.constrainVideoPosition();
-                    // 强制刷新以更新依赖 window 尺寸的定位
+                    // Force refresh to update positioning that depends on window size
                     this.$forceUpdate();
                 },
 
-                // 处理屏幕方向变化
+                // Handle screen orientation changes
                 handleOrientationChange() {
-                    // 延迟处理，等待方向变化完成
+                    // Delay processing, wait for orientation change to complete
                     setTimeout(() => {
                         this.constrainVideoPosition();
                         this.$forceUpdate();
                     }, 100);
                 },
 
-                // 约束视频位置在窗口边界内
+                // Constrain video position within window boundaries
                 constrainVideoPosition() {
                     const video = this.$refs.localVideo;
                     if (!video) return;
@@ -1837,7 +1854,7 @@
                     let newX = this.videoPosition.x;
                     let newY = this.videoPosition.y;
 
-                    // 边界约束（与拖拽一致，允许左右隐藏到只剩把手）
+                    // Boundary constraints (consistent with drag, allow left/right to hide to only leave handle)
                     const minX = -videoWidth + this.edgePeekWidth;
                     const maxX = windowWidth - this.edgePeekWidth;
                     const minY = 0;
@@ -1846,11 +1863,11 @@
                     newX = Math.max(minX, Math.min(newX, maxX));
                     newY = Math.max(minY, Math.min(newY, maxY));
 
-                    // 更新位置
+                    // Update position
                     this.videoPosition = { x: newX, y: newY };
                 },
 
-                // 消息容器触摸事件处理
+                // Message container touch event handling
                 handleMessageContainerTouchStart(event) {
                     this.isMessageContainerTouching = true;
                     this.isVerticalScrolling = false;
@@ -1859,7 +1876,7 @@
                     this.messageScrollStartX = touch.clientX;
                     this.messageScrollStartTime = Date.now();
 
-                    // 不阻止事件冒泡，让全局处理器也能接收到开始事件
+                    // Don't prevent event bubbling, let global handler also receive start event
                 },
 
                 handleMessageContainerTouchMove(event) {
@@ -1869,24 +1886,24 @@
                     const deltaY = touch.clientY - this.messageScrollStartY;
                     const deltaX = touch.clientX - this.messageScrollStartX;
 
-                    // 判断用户意图：如果垂直移动距离大于水平移动距离，则认为是垂直滚动
+                    // Determine user intent: if vertical movement distance is greater than horizontal movement distance, consider it vertical scrolling
                     if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
                         this.isVerticalScrolling = true;
-                        // 只有在垂直滚动时才阻止事件冒泡
+                        // Only prevent event bubbling when vertically scrolling
                         event.stopPropagation();
                     }
-                    // 如果是水平滑动，不阻止事件冒泡，让全局滑动手势处理
+                    // If it's horizontal sliding, don't prevent event bubbling, let global swipe gesture handle it
                 },
 
                 handleMessageContainerTouchEnd(event) {
                     this.isMessageContainerTouching = false;
                     this.isVerticalScrolling = false;
-                    // 不阻止事件冒泡，让全局处理器也能处理结束事件
+                    // Don't prevent event bubbling, let global handler also handle end event
                 },
 
-                // 全局滑动手势处理
+                // Global swipe gesture handling
                 handleGlobalTouchStart(event) {
-                    // 如果正在拖拽视频，不处理滑动手势
+                    // If dragging video, don't handle swipe gesture
                     if (this.isDragging) return;
 
                     const touch = event.touches[0];
@@ -1897,22 +1914,22 @@
                 },
 
                 handleGlobalTouchMove(event) {
-                    // 如果正在拖拽视频或正在垂直滚动，不处理滑动手势
+                    // If dragging video or vertically scrolling, don't handle swipe gesture
                     if (this.isDragging || this.isVerticalScrolling) return;
 
                     const touch = event.touches[0];
                     const deltaX = touch.clientX - this.swipeStartX;
                     const deltaY = touch.clientY - this.swipeStartY;
 
-                    // 检查是否是水平滑动手势（水平距离大于垂直距离）
+                    // Check if it's a horizontal swipe gesture (horizontal distance greater than vertical distance)
                     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
                         this.isSwipeGesture = true;
-                        event.preventDefault(); // 防止页面滚动
+                        event.preventDefault(); // Prevent page scrolling
                     }
                 },
 
                 handleGlobalTouchEnd(event) {
-                    // 如果正在拖拽视频或正在垂直滚动，不处理滑动手势
+                    // If dragging video or vertically scrolling, don't handle swipe gesture
                     if (this.isDragging || this.isVerticalScrolling || !this.isSwipeGesture) return;
 
                     const touch = event.changedTouches[0];
@@ -1920,16 +1937,16 @@
                     const deltaY = touch.clientY - this.swipeStartY;
                     const deltaTime = Date.now() - this.swipeStartTime;
 
-                    // 检查是否满足滑动条件
+                    // Check if swipe conditions are met
                     if (Math.abs(deltaX) > this.minSwipeDistance &&
                         deltaTime < this.maxSwipeTime &&
                         Math.abs(deltaX) > Math.abs(deltaY)) {
 
                         if (deltaX > 0) {
-                            // 右滑：隐藏消息容器
+                            // Right swipe: hide message container
                             this.isMoreMessageHidden = true;
                         } else {
-                            // 左滑：显示消息容器
+                            // Left swipe: show message container
                             this.isMoreMessageHidden = false;
                         }
                     }
@@ -1938,14 +1955,14 @@
                 },
 
 
-                // 按住说话相关方法
+                // Push-to-talk related methods
                 startPushToTalk() {
                     if (this.voiceMode !== 'push-to-talk') return;
-                    // 在用户手势的同步回调中尝试解锁音频
+                    // Try to unlock audio in user gesture's synchronous callback
                     this.unlockAudio();
                     this.dataChannel.send(JSON.stringify({ type: "push-to-talk", state: "start" }));
 
-                    // 先尝试在同步手势回调中触发震动，最大化通过率
+                    // First try to trigger vibration in synchronous gesture callback to maximize success rate
                     if (this.canVibrateNow()) {
                         try { navigator.vibrate(50); } catch (_) {}
                     }
@@ -1965,7 +1982,7 @@
                     console.log('End push-to-talk');
                 },
 
-                // 启用音频轨道
+                // Enable audio track
                 enableAudioTrack() {
                     if (!this.localStream) return;
 
@@ -1977,7 +1994,7 @@
                     this.audioTrackEnabled = true;
                 },
 
-                // 禁用音频轨道
+                // Disable audio track
                 disableAudioTrack() {
                     if (!this.localStream) return;
 
@@ -1989,24 +2006,24 @@
                     this.audioTrackEnabled = false;
                 },
 
-                // 安全触觉反馈（避免无用户手势时被浏览器拦截）
+                // Safe haptic feedback (avoid being blocked by browser without user gesture)
                 safeHapticFeedback(durationMs) {
                     try {
                         if (!this.canVibrateNow()) return;
                         navigator.vibrate(durationMs);
                     } catch (e) {
-                        // 忽略震动失败
+                        // Ignore vibration failure
                     }
                 },
 
-                // 判断当前是否允许震动调用（需要用户激活和焦点等）
+                // Determine if vibration calls are currently allowed (requires user activation and focus, etc.)
                 canVibrateNow() {
                     if (!('vibrate' in navigator)) return false;
                     if (typeof navigator.userActivation === 'object' && navigator.userActivation) {
-                        // 优先使用更严格的 userActivation.isActive
+                        // Prefer stricter userActivation.isActive
                         if (!navigator.userActivation.isActive) return false;
                     } else {
-                        // 回退：使用我们记录的首次交互标记
+                        // Fallback: use our recorded first interaction flag
                         if (!this.hasUserInteracted) return false;
                     }
                     if (!document.hasFocus()) return false;

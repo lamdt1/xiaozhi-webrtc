@@ -1,6 +1,6 @@
 /**
- * Live2D 管理器
- * 负责 Live2D 模型的初始化、嘴部动画控制等功能
+ * Live2D Manager
+ * Responsible for Live2D model initialization, mouth animation control, etc.
  */
 class Live2DManager {
     constructor() {
@@ -12,29 +12,29 @@ class Live2DManager {
         this.audioContext = null;
         this.analyser = null;
         this.dataArray = null;
-        // 单/双击判定配置与状态
+        // Single/double click detection configuration and state
         this._lastClickTime = 0;
         this._lastClickPos = { x: 0, y: 0 };
         this._singleClickTimer = null;
-        this._doubleClickMs = 280; // 双击时间阈值(ms)
-        this._doubleClickDist = 16; // 双击允许的最大位移(px)
-        // 滑动判定
+        this._doubleClickMs = 280; // Double click time threshold (ms)
+        this._doubleClickDist = 16; // Maximum displacement allowed for double click (px)
+        // Swipe detection
         this._pointerDown = false;
         this._downPos = { x: 0, y: 0 };
         this._downTime = 0;
         this._downArea = 'Body';
         this._movedBeyondClick = false;
-        this._swipeMinDist = 24; // 触发滑动的最小距离
+        this._swipeMinDist = 24; // Minimum distance to trigger swipe
     }
 
     /**
-     * 初始化 Live2D
+     * Initialize Live2D
      */
     async initializeLive2D() {
         try {
             const canvas = document.getElementById('live2d-stage');
 
-            // 供内部使用
+            // For internal use
             window.PIXI = PIXI;
 
             this.live2dApp = new PIXI.Application({
@@ -47,14 +47,14 @@ class Live2DManager {
                 backgroundAlpha: 0,
             });
 
-            // 加载 Live2D 模型
+            // Load Live2D model
             this.live2dModel = await PIXI.live2d.Live2DModel.from('static/hiyori_pro_zh/runtime/hiyori_pro_t11.model3.json');
             this.live2dApp.stage.addChild(this.live2dModel);
             this.live2dModel.scale.set(0.35);
             this.live2dModel.x = (window.innerWidth - this.live2dModel.width) * 0.5;
             this.live2dModel.y = -50;
 
-            // 启用交互并监听点击命中（头部/身体等）
+            // Enable interaction and listen for click hits (head/body, etc.)
 
             this.live2dModel.interactive = true;
 
@@ -94,18 +94,18 @@ class Live2DManager {
 
             });
 
-            // 兜底：自定义"头部/身体"命中区域 + 单/双击/滑动区分
+            // Fallback: custom "head/body" hit areas + single/double click/swipe distinction
             this.live2dModel.on('pointerdown', (event) => {
                 try {
                     const global = event.data.global;
                     const bounds = this.live2dModel.getBounds();
-                    // 仅在点击落在模型可见范围内时判定
+                    // Only judge when click falls within model's visible range
                     if (!bounds || !bounds.contains(global.x, global.y)) return;
 
                     const relX = (global.x - bounds.x) / (bounds.width || 1);
                     const relY = (global.y - bounds.y) / (bounds.height || 1);
                     let area = '';
-                    // 经验阈值：模型可见矩形的上部 20% 视为"头部"区域
+                    // Empirical threshold: upper 20% of model's visible rectangle is considered "head" area
                     console.log('relX', relX, 'relY', relY);
                     if (relX >= 0.4 && relX <= 0.6) {
                         if (relY <= 0.15) {
@@ -120,7 +120,7 @@ class Live2DManager {
                         return;
                     }
                     
-                    // 记录按下状态用于滑动判定
+                    // Record press state for swipe detection
                     this._pointerDown = true;
                     this._downPos = { x: global.x, y: global.y };
                     this._downTime = performance.now();
@@ -133,9 +133,9 @@ class Live2DManager {
                     const dy = global.y - (this._lastClickPos?.y || 0);
                     const dist = Math.hypot(dx, dy);
 
-                    // 命中确认：仅当点击在模型上时做单/双击判断
+                    // Hit confirmation: only do single/double click judgment when clicking on model
                     if (this._lastClickTime && dt <= this._doubleClickMs && dist <= this._doubleClickDist) {
-                        // 判定为双击：取消待触发的单击事件
+                        // Determined as double click: cancel pending single click event
                         if (this._singleClickTimer) {
                             clearTimeout(this._singleClickTimer);
                             this._singleClickTimer = null;
@@ -144,11 +144,11 @@ class Live2DManager {
                             this.live2dModel.emit('doublehit', [area]);
                         }
                         this._lastClickTime = 0;
-                        this._pointerDown = false; // 双击完成，重置状态
+                        this._pointerDown = false; // Double click completed, reset state
                         return;
                     }
 
-                    // 可能是单击：记录并延迟确认
+                    // Might be single click: record and delay confirmation
                     this._lastClickTime = now;
                     this._lastClickPos = { x: global.x, y: global.y };
                     if (this._singleClickTimer) {
@@ -156,7 +156,7 @@ class Live2DManager {
                         this._singleClickTimer = null;
                     }
                     this._singleClickTimer = setTimeout(() => {
-                        // 若在等待期间发生了移动超过阈值，则不再当作单击
+                        // If movement beyond threshold occurred during waiting period, no longer treat as single click
                         if (!this._movedBeyondClick && typeof this.live2dModel.emit === 'function') {
                             this.live2dModel.emit('singlehit', [area]);
                         }
@@ -164,11 +164,11 @@ class Live2DManager {
                         this._lastClickTime = 0;
                     }, this._doubleClickMs);
                 } catch (e) {
-                    // 忽略自定义命中判断中的异常，避免影响主流程
+                    // Ignore exceptions in custom hit detection to avoid affecting main flow
                 }
             });
 
-            // 指针移动：用于判定是否从"点击"升级为"滑动"
+            // Pointer movement: used to determine if "click" is upgraded to "swipe"
             this.live2dModel.on('pointermove', (event) => {
                 try {
                     if (!this._pointerDown) return;
@@ -177,10 +177,10 @@ class Live2DManager {
                     const dy = global.y - this._downPos.y;
                     const dist = Math.hypot(dx, dy);
                     
-                    // 使用 _doubleClickDist 作为点击/滑动的判定阈值
+                    // Use _doubleClickDist as click/swipe detection threshold
                     if (dist > this._doubleClickDist) {
                         this._movedBeyondClick = true;
-                        // 若已超出点击阈值，取消可能的单击触发
+                        // If click threshold exceeded, cancel possible single click trigger
                         if (this._singleClickTimer) {
                             clearTimeout(this._singleClickTimer);
                             this._singleClickTimer = null;
@@ -188,11 +188,11 @@ class Live2DManager {
                         this._lastClickTime = 0;
                     }
                 } catch (e) {
-                    // 忽略移动判定中的异常
+                    // Ignore exceptions in movement detection
                 }
             });
 
-            // 指针抬起：确认是否为滑动
+            // Pointer up: confirm if it's a swipe
             const handlePointerUp = (event) => {
                 try {
                     if (!this._pointerDown) return;
@@ -201,7 +201,7 @@ class Live2DManager {
                     const dy = global.y - this._downPos.y;
                     const dist = Math.hypot(dx, dy);
 
-                    // 滑动：超过滑动最小距离则触发 swipe 事件（携带方向与区域）
+                    // Swipe: trigger swipe event if minimum swipe distance exceeded (with direction and area)
                     if (this._movedBeyondClick && dist >= this._swipeMinDist) {
                         if (typeof this.live2dModel.emit === 'function') {
                             const dir = Math.abs(dx) >= Math.abs(dy)
@@ -209,7 +209,7 @@ class Live2DManager {
                                 : (dy > 0 ? 'down' : 'up');
                             this.live2dModel.emit('swipe', [this._downArea, dir]);
                         }
-                        // 终止：不再让单击/双击触发
+                        // Terminate: no longer let single/double click trigger
                         if (this._singleClickTimer) {
                             clearTimeout(this._singleClickTimer);
                             this._singleClickTimer = null;
@@ -217,7 +217,7 @@ class Live2DManager {
                         this._lastClickTime = 0;
                     }
                 } catch (e) {
-                    // 忽略抬起判定中的异常
+                    // Ignore exceptions in up detection
                 }
                 finally {
                     this._pointerDown = false;
@@ -230,38 +230,38 @@ class Live2DManager {
             
                 
         } catch (err) {
-            console.error('加载 Live2D 模型失败:', err);
+            console.error('Failed to load Live2D model:', err);
         }
     }
 
     /**
-     * 初始化音频分析器
-     * @param {MediaStream} remoteStream - 远程音频流
+     * Initialize audio analyzer
+     * @param {MediaStream} remoteStream - Remote audio stream
      */
     initializeAudioAnalyzer(remoteStream) {
         try {
-            // 创建音频上下文和分析器
+            // Create audio context and analyzer
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.analyser = this.audioContext.createAnalyser();
             this.analyser.fftSize = 256;
             this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
 
-            // 获取remoteVideo的音频轨道
+            // Get remoteVideo's audio track
             if (remoteStream) {
                 const audioTracks = remoteStream.getAudioTracks();
                 if (audioTracks.length > 0) {
                     const source = this.audioContext.createMediaStreamSource(remoteStream);
                     source.connect(this.analyser);
-                    // console.log('音频分析器初始化成功');
+                    // console.log('Audio analyzer initialized successfully');
                 }
             }
         } catch (error) {
-            console.error('初始化音频分析器失败:', error);
+            console.error('Failed to initialize audio analyzer:', error);
         }
     }
 
     /**
-     * 嘴部动画循环
+     * Mouth animation loop
      */
     animateMouth() {
         if (!this.isTalking) return;
@@ -270,12 +270,12 @@ class Live2DManager {
         if (internal && internal.coreModel) {
             const coreModel = internal.coreModel;
 
-            // 获取音频分贝值
+            // Get audio decibel value
             let mouthValue = 0;
             if (this.analyser && this.dataArray) {
                 this.analyser.getByteFrequencyData(this.dataArray);
                 const average = this.dataArray.reduce((a, b) => a + b) / this.dataArray.length;
-                // 将0-255的值转换为0-1的范围，并应用一些平滑处理
+                // Convert 0-255 values to 0-1 range and apply some smoothing
                 mouthValue = Math.min(1, (average / 255) * 3);
             }
             // console.log("mouthValue", mouthValue)
@@ -286,13 +286,13 @@ class Live2DManager {
     }
 
     /**
-     * 开始说话动画
-     * @param {MediaStream} remoteStream - 远程音频流
+     * Start talking animation
+     * @param {MediaStream} remoteStream - Remote audio stream
      */
     startTalking(remoteStream) {
         if (this.isTalking || !this.live2dModel) return;
 
-        // 确保音频分析器已初始化
+        // Ensure audio analyzer is initialized
         if (!this.analyser && remoteStream) {
             this.initializeAudioAnalyzer(remoteStream);
         }
@@ -302,7 +302,7 @@ class Live2DManager {
     }
 
     /**
-     * 停止说话动画
+     * Stop talking animation
      */
     stopTalking() {
         this.isTalking = false;
@@ -320,8 +320,8 @@ class Live2DManager {
     }
 
     /**
-     * 触发模型动作（Motion）
-     * @param {string} name - 动作分组名称，如 'TapBody'、'FlickUp'、'Idle' 等
+     * Trigger model motion
+     * @param {string} name - Motion group name, such as 'TapBody', 'FlickUp', 'Idle', etc.
      */
     motion(name) {
         try {
@@ -329,17 +329,17 @@ class Live2DManager {
             console.log("motion:", name);
             this.live2dModel.motion(name);
         } catch (error) {
-            console.error('触发动作失败:', error);
+            console.error('Failed to trigger motion:', error);
         }
     }
 
     /**
-     * 清理资源
+     * Clean up resources
      */
     destroy() {
         this.stopTalking();
         
-        // 清理音频分析器
+        // Clean up audio analyzer
         if (this.audioContext) {
             this.audioContext.close();
             this.audioContext = null;
@@ -347,7 +347,7 @@ class Live2DManager {
         this.analyser = null;
         this.dataArray = null;
 
-        // 清理 Live2D 应用
+        // Clean up Live2D application
         if (this.live2dApp) {
             this.live2dApp.destroy(true);
             this.live2dApp = null;
@@ -356,5 +356,5 @@ class Live2DManager {
     }
 }
 
-// 导出全局实例
+// Export global instance
 window.Live2DManager = Live2DManager;

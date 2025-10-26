@@ -6,7 +6,7 @@
   "display": "standalone",
   "background_color": "#e3f2fd",
   "theme_color": "#1976d2",
-  "description": "基于 WebRTC 的 AI 实时音视频互动应用",
+  "description": "AI real-time audio-video interaction application based on WebRTC",
   "icons": [
     {
       "src": "/static/favicon.ico",

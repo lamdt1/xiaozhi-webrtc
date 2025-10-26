@@ -13,7 +13,7 @@ class VideoFaceSwapper(VideoStreamTrack):
         self.track = track
         self.xiaozhi = xiaozhi
 
-        # 加载图片
+        # Load images
         self.image_dict = {}
         self.init_image()
         self.image = self.image_dict["default"]
@@ -51,7 +51,7 @@ class VideoFaceSwapper(VideoStreamTrack):
             return frame
         self.xiaozhi.server.video_frame = frame
 
-        # 使用加载的图片创建视频帧
+        # Use loaded images to create video frames
         new_frame = VideoFrame.from_ndarray(self.image, format="bgr24")
         new_frame.pts = frame.pts
         new_frame.time_base = frame.time_base

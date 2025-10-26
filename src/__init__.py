@@ -76,6 +76,20 @@ async def ice(request):
     return web.Response(content_type="application/json", text=json.dumps(ice_servers_config, ensure_ascii=False))
 
 
+async def ice_status(request):
+    """Return ICE server configuration status and validation results"""
+    validation = ice_config.validate_configuration()
+    summary = ice_config.get_configuration_summary()
+    
+    status_data = {
+        "validation": validation,
+        "summary": summary,
+        "timestamp": asyncio.get_event_loop().time()
+    }
+    
+    return web.Response(content_type="application/json", text=json.dumps(status_data, ensure_ascii=False))
+
+
 async def offer(request):
     params = await request.json()
     _offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
@@ -181,6 +195,7 @@ def run():
     app.router.add_get("/chatv2", chatv2)
 
     app.router.add_get("/api/ice", ice)
+    app.router.add_get("/api/ice/status", ice_status)
     app.router.add_post("/api/offer", offer)
     app.router.add_static("/static/", path=os.path.join(ROOT, "static"), name="static")
 

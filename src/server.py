@@ -55,7 +55,7 @@ class XiaoZhiServer(object):
                     {
                         "audio_speaker": {"volume": 100},
                         # 'screen': {'brightness': 75, 'theme': 'light'},
-                        # 'network': {'type': 'wifi', 'ssid': 'wifi名称', 'signal': 'strong'}
+                        # 'network': {'type': 'wifi', 'ssid': 'wifi_name', 'signal': 'strong'}
                     }
                 ),
                 False,
@@ -63,7 +63,7 @@ class XiaoZhiServer(object):
 
         def tool_take_photo(data):
             img_obj = self.server.video_frame.to_ndarray(format="bgr24")
-            # 直接使用 OpenCV 编码图片
+            # Directly use OpenCV to encode image
             _, img_byte = cv2.imencode(".jpg", img_obj)
             img_byte = img_byte.tobytes()
             return img_byte, False
