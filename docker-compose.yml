@@ -1,7 +1,8 @@
 services:
   web:
     # build: .
-    image: dairoot/xiaozhi-webrtc:latest
+    #image: dairoot/xiaozhi-webrtc:latest
+    image: xiaozhi-webrtc:latest
     ports:
       - "${PORT:-51000}:${PORT:-51000}"
     volumes:
