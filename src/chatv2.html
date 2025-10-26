@@ -1345,7 +1345,7 @@
                         // console.log('Get ICE configuration from server:', iceConfig);
                         
                         // Decrypt credentials (if master key is available)
-                        const masterKey = window.ICE_MASTER_KEY || localStorage.getItem('ice_master_key');
+                        const masterKey = window.ICE_MASTER_KEY || localStorage.getItem('ice_master_key') || '9fcotuB_ntxL4EIRMxHk2a4S9zs5fOviL80IYrXLnq4=';
                         if (masterKey && window.iceCrypto) {
                             try {
                                 await window.iceCrypto.init(masterKey);
