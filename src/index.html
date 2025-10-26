@@ -385,56 +385,56 @@
     <div id="app">
         <button class="settings-button" @click="showSettings = true">
             <span class="button-icon">⚙️</span>
-            <span>设置</span>
+            <span>Settings</span>
         </button>
 
         <div v-if="showSettings" class="settings-modal" @click.self="showSettings = false">
-            <div class="settings-panel" role="dialog" aria-modal="true" aria-label="设置">
+            <div class="settings-panel" role="dialog" aria-modal="true" aria-label="Settings">
                 <div class="settings-header">
-                    <div class="settings-title">设置</div>
-                    <button class="settings-close" @click="showSettings = false" aria-label="关闭设置">✕</button>
+                    <div class="settings-title">Settings</div>
+                    <button class="settings-close" @click="showSettings = false" aria-label="Close Settings">✕</button>
                 </div>
                 <div class="settings-content">
                     <div class="microphone-section">
-                        <div class="input-label">麦克风选择</div>
+                        <div class="input-label">Microphone Selection</div>
                         <select v-model="selectedAudioDeviceId" class="microphone-select" :disabled="isLoadingMicrophones">
-                            <option value="">自动选择麦克风</option>
+                            <option value="">Auto-select microphone</option>
                             <option v-for="device in audioInputDevices"
                                     :key="device.deviceId"
                                     :value="device.deviceId">
-                                {{ device.label || `麦克风 ${device.deviceId.slice(0, 8)}` }}
+                                {{ device.label || `Microphone ${device.deviceId.slice(0, 8)}` }}
                             </option>
                         </select>
                     </div>
 
                     <div class="speaker-section">
-                        <div class="input-label">扬声器选择</div>
+                        <div class="input-label">Speaker Selection</div>
                         <select v-model="selectedSpeakerDeviceId" class="microphone-select" :disabled="isLoadingSpeakers">
-                            <option value="">自动选择扬声器</option>
+                            <option value="">Auto-select speaker</option>
                             <option v-for="device in audioOutputDevices"
                                     :key="device.deviceId"
                                     :value="device.deviceId">
-                                {{ device.label || `扬声器 ${device.deviceId.slice(0, 8)}` }}
+                                {{ device.label || `Speaker ${device.deviceId.slice(0, 8)}` }}
                             </option>
                         </select>
                     </div>
 
                     <div class="push-to-talk-section">
-                        <div class="input-label">语音模式</div>
+                        <div class="input-label">Voice Mode</div>
                         <div class="voice-mode-options">
                             <label class="voice-mode-option">
                                 <input type="radio" v-model="voiceMode" value="continuous" class="voice-mode-radio">
-                                <span class="voice-mode-label">连续对话</span>
+                                <span class="voice-mode-label">Continuous Conversation</span>
                             </label>
                             <label class="voice-mode-option">
                                 <input type="radio" v-model="voiceMode" value="push-to-talk" class="voice-mode-radio">
-                                <span class="voice-mode-label">按住说话</span>
+                                <span class="voice-mode-label">Push-to-Talk</span>
                             </label>
                         </div>
                     </div>
                 </div>
                 <div class="settings-actions">
-                    <button class="initial-control-button" @click="showSettings = false">完成</button>
+                    <button class="initial-control-button" @click="showSettings = false">Done</button>
                 </div>
             </div>
         </div>
@@ -447,22 +447,22 @@
 
                 <div class="initial-card">
                     <div class="initial-input-section">
-                        <div class="input-label">设备配置</div>
-                        <input type="text" class="initial-input" v-model="macAddress" placeholder="请输入你的设备MAC地址（可选）"
+                        <div class="input-label">Device Configuration</div>
+                        <input type="text" class="initial-input" v-model="macAddress" placeholder="Enter your device MAC address (optional)"
                             :class="{ 'error': macAddressError }" @input="validateMacAddress">
 
                         <div v-if="macAddressError" class="initial-error-message">
-                            请输入正确的MAC地址格式 (XX:XX:XX:XX:XX:XX)
+                            Please enter correct MAC address format (XX:XX:XX:XX:XX:XX)
                         </div>
 
                         <div class="mac-preset-section">
-                            <div class="preset-label">快速选择默认设备</div>
+                            <div class="preset-label">Quick Select Default Device</div>
                             <div class="mac-preset-tags">
                                 <div class="mac-preset-tag" @click="selectPresetMac('00:00:00:00:00:aa')">
-                                    <span class="preset-name">💢 情感多变小智</span>
+                                    <span class="preset-name">💢 Emotional XiaoZhi</span>
                                 </div>
                                 <div class="mac-preset-tag" @click="selectPresetMac('00:00:00:00:00:bb')">
-                                    <span class="preset-name">🤔 好奇小男孩</span>
+                                    <span class="preset-name">🤔 Curious Boy</span>
                                 </div>
                             </div>
                         </div>
@@ -472,7 +472,7 @@
 
                     <div class="initial-actions">
                         <button class="initial-control-button" @click="goChat()" :disabled="macAddressError">
-                            开始聊天
+                            Start Chat
                         </button>
                     </div>
                 </div>
@@ -503,7 +503,7 @@
                 showSettings: false,
             },
             mounted() {
-                // 从本地存储加载设置
+                // Load settings from local storage
                 try {
                     const savedMac = localStorage.getItem('macAddress');
                     const savedAudio = localStorage.getItem('selectedAudioDeviceId');
@@ -514,7 +514,7 @@
                     if (savedSpeaker) this.selectedSpeakerDeviceId = savedSpeaker;
                     if (savedVoiceMode) this.voiceMode = savedVoiceMode;
                     this.validateMacAddress();
-                } catch (e) { /* 忽略本地存储错误 */ }
+                } catch (e) { /* Ignore local storage errors */ }
                 this.enumerateAudioDevices();
             },
             watch: {
@@ -533,13 +533,13 @@
             },
             methods: {
                 goChat() {
-                    // 设置已存入 localStorage，直接跳转
+                    // Settings saved to localStorage, redirect directly
                     window.location.href = '/chatv2';
                 },
                 validateMacAddress() {
                     this.formatMacAddress();
                     const macAddressPattern = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
-                    // 确保始终为布尔值，避免出现空字符串导致按钮被视为禁用
+                    // Ensure always boolean value, avoid empty string causing button to be considered disabled
                     this.macAddressError = (!!this.macAddress) && !macAddressPattern.test(this.macAddress);
                 },
                 formatMacAddress() {
@@ -560,24 +560,24 @@
                 },
                 async enumerateAudioDevices() {
                     try {
-                        // 首先请求麦克风权限以获取设备标签
+                        // First request microphone permission to get device labels
                         await navigator.mediaDevices.getUserMedia({ audio: true });
 
                         const devices = await navigator.mediaDevices.enumerateDevices();
                         this.audioInputDevices = devices.filter(d => d.kind === 'audioinput');
                         this.audioOutputDevices = devices.filter(d => d.kind === 'audiooutput');
 
-                        console.log('可用音频输入设备:', this.audioInputDevices.map(d => ({
+                        console.log('Available audio input devices:', this.audioInputDevices.map(d => ({
                             deviceId: d.deviceId,
-                            label: d.label || '未知设备'
+                            label: d.label || 'Unknown device'
                         })));
 
-                        console.log('可用音频输出设备:', this.audioOutputDevices.map(d => ({
+                        console.log('Available audio output devices:', this.audioOutputDevices.map(d => ({
                             deviceId: d.deviceId,
-                            label: d.label || '未知设备'
+                            label: d.label || 'Unknown device'
                         })));
 
-                        // 如果没有选择设备且存在音频设备，选择第一个
+                        // If no device selected and audio devices exist, select the first one
                         if (!this.selectedAudioDeviceId && this.audioInputDevices.length > 0) {
                             this.selectedAudioDeviceId = this.audioInputDevices[0].deviceId;
                         }
@@ -586,14 +586,14 @@
                             this.selectedSpeakerDeviceId = this.audioOutputDevices[0].deviceId;
                         }
                     } catch (e) {
-                        console.warn('枚举音频设备失败:', e);
-                        // 即使权限被拒绝，也尝试枚举设备（但可能没有标签）
+                        console.warn('Failed to enumerate audio devices:', e);
+                        // Even if permission denied, try to enumerate devices (but may not have labels)
                         try {
                             const devices = await navigator.mediaDevices.enumerateDevices();
                             this.audioInputDevices = devices.filter(d => d.kind === 'audioinput' && d.deviceId !== '');
                             this.audioOutputDevices = devices.filter(d => d.kind === 'audiooutput' && d.deviceId !== '');
                         } catch (enumError) {
-                            console.warn('设备枚举失败:', enumError);
+                            console.warn('Device enumeration failed:', enumError);
                         }
                     } finally {
                         this.isLoadingMicrophones = false;

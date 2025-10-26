@@ -1,6 +1,6 @@
 """
-回声消除管理器
-Echo Cancellation Manager - 统一管理回声消除逻辑
+Echo Cancellation Manager
+Echo Cancellation Manager - Unified management of echo cancellation logic
 """
 
 import numpy as np
@@ -10,155 +10,155 @@ from src.audio.echo_canceller import EchoCanceller
 
 class EchoCancellationManager:
     """
-    回声消除管理器
-    负责统一管理回声消除的所有逻辑，包括：
-    - 回声消除器的初始化和配置
-    - 音频处理和安全检查
-    - 调试信息输出
-    - 自适应参数调整
+    Echo Cancellation Manager
+    Responsible for unified management of all echo cancellation logic, including:
+    - Echo canceller initialization and configuration
+    - Audio processing and safety checks
+    - Debug information output
+    - Adaptive parameter adjustment
     """
 
     def __init__(self, enable_echo_cancellation=True, enable_debug=False):
         """
-        初始化回声消除管理器
+        Initialize echo cancellation manager
 
         Args:
-            enable_echo_cancellation: 是否启用回声消除
-            enable_debug: 是否启用调试信息
+            enable_echo_cancellation: Whether to enable echo cancellation
+            enable_debug: Whether to enable debug information
         """
         self.enable_echo_cancellation = enable_echo_cancellation
         self.enable_debug = enable_debug
 
-        # 初始化回声消除器
+        # Initialize echo canceller
         self.echo_canceller = EchoCanceller()
 
-        # 参考信号存储
+        # Reference signal storage
         self.reference_audio = None
 
-        # 统计信息
+        # Statistics
         self.frame_count = 0
         self.over_suppression_count = 0
 
-        # 安全检查参数
-        self.min_energy_ratio = 0.1  # 最小能量比例，防止过度抑制
-        self.min_original_rms = 100  # 最小原始RMS阈值
-        self.mix_ratio = 0.3  # 过度抑制时的原始音频混合比例
+        # Safety check parameters
+        self.min_energy_ratio = 0.1  # Minimum energy ratio to prevent over-suppression
+        self.min_original_rms = 100  # Minimum original RMS threshold
+        self.mix_ratio = 0.3  # Original audio mixing ratio when over-suppressed
 
-        # 调试参数
-        self.debug_interval = 200  # 调试信息输出间隔（帧数）
+        # Debug parameters
+        self.debug_interval = 200  # Debug information output interval (frames)
 
     def update_reference_audio(self, reference_samples):
         """
-        更新参考音频信号
+        Update reference audio signal
 
         Args:
-            reference_samples: 参考音频样本 (numpy array)
+            reference_samples: Reference audio samples (numpy array)
         """
         if reference_samples is None:
             return
 
         try:
-            # 验证参考音频的有效性
+            # Validate reference audio validity
             if len(reference_samples) == 0:
-                # self._log_debug("参考音频为空，跳过更新")
+                # self._log_debug("Reference audio is empty, skipping update")
                 return
 
-            # 检查数值有效性
+            # Check numerical validity
             if not np.all(np.isfinite(reference_samples)):
-                # self._log_debug("参考音频包含无效值，进行清理")
+                # self._log_debug("Reference audio contains invalid values, cleaning")
                 reference_samples = np.where(np.isfinite(reference_samples), reference_samples, 0)
 
             self.reference_audio = reference_samples.copy()
-            # 同时添加到回声消除器的缓冲区
+            # Also add to echo canceller buffer
             self.echo_canceller.add_reference_audio(reference_samples)
 
         except Exception as e:
-            self._log_debug(f"更新参考音频失败: {e}")
-            # 更新失败时不影响现有的参考音频
+            self._log_debug(f"Failed to update reference audio: {e}")
+            # When update fails, don't affect existing reference audio
 
     def process_microphone_audio(self, input_audio):
         """
-        处理麦克风输入的音频
+        Process microphone input audio
 
         Args:
-            input_audio: 麦克风输入的音频数据 (numpy array, int16)
+            input_audio: Microphone input audio data (numpy array, int16)
 
         Returns:
-            numpy array: 处理后的音频数据 (int16)
+            numpy array: Processed audio data (int16)
         """
         self.frame_count += 1
 
-        # 输入验证
+        # Input validation
         if input_audio is None or len(input_audio) == 0:
-            self._log_debug(f"Frame {self.frame_count}: 输入音频为空")
-            return np.zeros(960, dtype=np.int16)  # 返回静音帧
+            self._log_debug(f"Frame {self.frame_count}: Input audio is empty")
+            return np.zeros(960, dtype=np.int16)  # Return silent frame
 
-        # 检查输入音频的数值有效性
+        # Check input audio numerical validity
         if not np.all(np.isfinite(input_audio)):
-            self._log_debug(f"Frame {self.frame_count}: 输入音频包含无效值，使用零填充")
+            self._log_debug(f"Frame {self.frame_count}: Input audio contains invalid values, using zero padding")
             input_audio = np.where(np.isfinite(input_audio), input_audio, 0)
 
-        # 如果回声消除未启用或没有参考信号，直接返回原始音频
+        # If echo cancellation is not enabled or no reference signal, return original audio directly
         if not self.enable_echo_cancellation or self.reference_audio is None:
-            # self._log_debug(f"Frame {self.frame_count}: 回声消除未启用或无参考信号")
+            # self._log_debug(f"Frame {self.frame_count}: Echo cancellation not enabled or no reference signal")
             return input_audio
 
-        # 执行回声消除 - 添加异常处理
+        # Perform echo cancellation - add exception handling
         try:
             cleaned_audio = self.echo_canceller.process_audio(input_audio, reference_audio=self.reference_audio)
         except Exception as e:
-            self._log_debug(f"Frame {self.frame_count}: 回声消除处理失败: {e}")
-            # 回声消除失败时，返回原始音频
+            self._log_debug(f"Frame {self.frame_count}: Echo cancellation processing failed: {e}")
+            # When echo cancellation fails, return original audio
             return input_audio
 
-        # 安全检查和后处理
+        # Safety check and post-processing
         try:
             final_audio = self._safety_check_and_mix(input_audio, cleaned_audio)
         except Exception as e:
-            self._log_debug(f"Frame {self.frame_count}: 安全检查失败: {e}")
-            # 安全检查失败时，返回清理后的音频或原始音频
+            self._log_debug(f"Frame {self.frame_count}: Safety check failed: {e}")
+            # When safety check fails, return cleaned audio or original audio
             final_audio = cleaned_audio if cleaned_audio is not None else input_audio
 
-        # 输出调试信息
+        # Output debug information
         self._output_debug_info(input_audio, cleaned_audio, final_audio)
 
         return final_audio
 
     def _safety_check_and_mix(self, original_audio, cleaned_audio):
         """
-        安全检查和音频混合
+        Safety check and audio mixing
 
         Args:
-            original_audio: 原始音频
-            cleaned_audio: 清理后的音频
+            original_audio: Original audio
+            cleaned_audio: Cleaned audio
 
         Returns:
-            numpy array: 最终处理后的音频
+            numpy array: Final processed audio
         """
-        # 计算音频能量 - 使用安全的数值计算
+        # Calculate audio energy - using safe numerical calculation
         original_float64 = original_audio.astype(np.float64)
         cleaned_float64 = cleaned_audio.astype(np.float64)
 
         original_rms = np.sqrt(np.mean(original_float64**2))
         cleaned_rms = np.sqrt(np.mean(cleaned_float64**2))
 
-        # 检查RMS值的有效性
+        # Check RMS value validity
         if not np.isfinite(original_rms):
             original_rms = 0.0
         if not np.isfinite(cleaned_rms):
             cleaned_rms = 0.0
 
-        # 检查是否过度抑制
+        # Check for over-suppression
         if cleaned_rms < original_rms * self.min_energy_ratio and original_rms > self.min_original_rms:
 
-            # 过度抑制，混合原始音频
+            # Over-suppression, mix original audio
             self.over_suppression_count += 1
             mixed_audio = self._mix_audio(original_audio, cleaned_audio, self.mix_ratio)
 
             if self.frame_count % 100 == 0:
                 self._log_debug(
-                    f"Frame {self.frame_count}: 检测到过度抑制，混合原始音频 "
-                    f"(总计: {self.over_suppression_count}次)"
+                    f"Frame {self.frame_count}: Over-suppression detected, mixing original audio "
+                    f"(Total: {self.over_suppression_count} times)"
                 )
 
             return mixed_audio
@@ -167,15 +167,15 @@ class EchoCancellationManager:
 
     def _mix_audio(self, original_audio, processed_audio, original_ratio):
         """
-        混合原始音频和处理后的音频
+        Mix original audio and processed audio
 
         Args:
-            original_audio: 原始音频
-            processed_audio: 处理后的音频
-            original_ratio: 原始音频的混合比例
+            original_audio: Original audio
+            processed_audio: Processed audio
+            original_ratio: Mixing ratio of original audio
 
         Returns:
-            numpy array: 混合后的音频
+            numpy array: Mixed audio
         """
         processed_ratio = 1.0 - original_ratio
         mixed_audio = (
@@ -185,12 +185,12 @@ class EchoCancellationManager:
 
     def _output_debug_info(self, original_audio, cleaned_audio, final_audio):
         """
-        输出调试信息
+        Output debug information
 
         Args:
-            original_audio: 原始音频
-            cleaned_audio: 清理后的音频
-            final_audio: 最终音频
+            original_audio: Original audio
+            cleaned_audio: Cleaned audio
+            final_audio: Final audio
         """
         if not self.enable_debug or self.frame_count % self.debug_interval != 0:
             return
@@ -201,7 +201,7 @@ class EchoCancellationManager:
 
         ratio = cleaned_rms / original_rms if original_rms > 0 else 0
 
-        # 获取回声消除器统计信息
+        # Get echo canceller statistics
         echo_stats = self.echo_canceller.get_statistics()
 
         self._log_debug(
@@ -215,17 +215,17 @@ class EchoCancellationManager:
         )
 
     def _log_debug(self, message):
-        """输出调试信息"""
+        """Output debug information"""
         pass
         # if self.enable_debug:
         #     print(f"[EchoCancellationManager] {message}")
 
     def get_statistics(self):
         """
-        获取管理器统计信息
+        Get manager statistics
 
         Returns:
-            dict: 统计信息
+            dict: Statistics
         """
         echo_stats = self.echo_canceller.get_statistics()
 
@@ -241,7 +241,7 @@ class EchoCancellationManager:
         }
 
     def reset(self):
-        """重置管理器状态"""
+        """Reset manager state"""
         self.echo_canceller.reset()
         self.reference_audio = None
         self.frame_count = 0
@@ -249,27 +249,27 @@ class EchoCancellationManager:
 
     def set_parameters(self, **kwargs):
         """
-        动态设置参数
+        Dynamically set parameters
 
         Args:
-            **kwargs: 参数字典，可包含：
-                - enable_echo_cancellation: 是否启用回声消除
-                - min_energy_ratio: 最小能量比例
-                - mix_ratio: 混合比例
-                - debug_interval: 调试输出间隔
+            **kwargs: Parameter dictionary, can include:
+                - enable_echo_cancellation: Whether to enable echo cancellation
+                - min_energy_ratio: Minimum energy ratio
+                - mix_ratio: Mixing ratio
+                - debug_interval: Debug output interval
         """
         if "enable_echo_cancellation" in kwargs:
             self.enable_echo_cancellation = kwargs["enable_echo_cancellation"]
-            self._log_debug(f"回声消除已{'启用' if self.enable_echo_cancellation else '禁用'}")
+            self._log_debug(f"Echo cancellation {'enabled' if self.enable_echo_cancellation else 'disabled'}")
 
         if "min_energy_ratio" in kwargs:
             self.min_energy_ratio = kwargs["min_energy_ratio"]
-            self._log_debug(f"最小能量比例设置为: {self.min_energy_ratio}")
+            self._log_debug(f"Minimum energy ratio set to: {self.min_energy_ratio}")
 
         if "mix_ratio" in kwargs:
             self.mix_ratio = kwargs["mix_ratio"]
-            self._log_debug(f"混合比例设置为: {self.mix_ratio}")
+            self._log_debug(f"Mixing ratio set to: {self.mix_ratio}")
 
         if "debug_interval" in kwargs:
             self.debug_interval = kwargs["debug_interval"]
-            self._log_debug(f"调试输出间隔设置为: {self.debug_interval}")
+            self._log_debug(f"Debug output interval set to: {self.debug_interval}")

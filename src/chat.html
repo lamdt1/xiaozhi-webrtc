@@ -323,31 +323,31 @@
                 <div class="loading-overlay" v-if="isLoadingOffer">
                     <div class="loading-box">
                         <div class="spinner"></div>
-                        <div>正在建立连接…</div>
+                        <div>Establishing connection...</div>
                     </div>
                 </div>
                 <div id="media">
                     <div class="video-container">
                         <div class="main-video">
-                            <div class="video-label">{{ isLocalVideoMain ? '本地视频' : '远程视频' }}</div>
+                            <div class="video-label">{{ isLocalVideoMain ? 'Local Video' : 'Remote Video' }}</div>
                             <video ref="mainVideo" autoplay :muted="isLocalVideoMain" playsinline></video>
                         </div>
 
                         <div class="small-video" @click="switchVideoPosition">
-                            <div class="video-label">{{ isLocalVideoMain ? '远程视频' : '本地视频' }}</div>
+                            <div class="video-label">{{ isLocalVideoMain ? 'Remote Video' : 'Local Video' }}</div>
                             <video ref="smallVideo" autoplay :muted="!isLocalVideoMain" playsinline></video>
                         </div>
 
                         <div class="video-controls">
-                            <button class="video-control-btn close" @click="endAndBack" title="结束通话">
+                            <button class="video-control-btn close" @click="endAndBack" title="End Call">
                                 <span class="icon">✕</span>
                             </button>
 
                             <div class="status-indicator" :class="{ speaking: speakingState === 'speaking', listening: speakingState === 'listening' }">
-                                {{ speakingState === 'listening' ? '我在听' : '我在说话' }}
+                                {{ speakingState === 'listening' ? 'I am listening' : 'I am speaking' }}
                             </div>
 
-                            <button class="video-control-btn video-btn" :class="{ 'active': showLocalVideo, 'inactive': !showLocalVideo }" @click="toggleLocalVideo" :title="showLocalVideo ? '关闭本地视频' : '开启本地视频'">
+                            <button class="video-control-btn video-btn" :class="{ 'active': showLocalVideo, 'inactive': !showLocalVideo }" @click="toggleLocalVideo" :title="showLocalVideo ? 'Turn off local video' : 'Turn on local video'">
                                 <span class="icon" v-if="showLocalVideo">
                                     <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M907.712 642.592l-2.624-302.592-204.256 145.056 206.88 157.536z m-39.68-354.784a64 64 0 0 1 101.056 51.648l2.624 302.592a64 64 0 0 1-102.752 51.456l-206.912-157.536a64 64 0 0 1 1.728-103.104l204.256-145.056z" fill="currentColor"></path><path d="M144 256a32 32 0 0 0-32 32v417.376a32 32 0 0 0 32 32h456.32a32 32 0 0 0 32-32V288a32 32 0 0 0-32-32H144z m0-64h456.32a96 96 0 0 1 96 96v417.376a96 96 0 0 1-96 96H144a96 96 0 0 1-96-96V288a96 96 0 0 1 96-96z" fill="currentColor"></path></svg>
                                 </span>
@@ -413,10 +413,10 @@
                             video: { width: 640, height: 480 },
                             audio: {
                                     echoCancellation: true,
-                                    echoCancellationType: "browser", // 使用浏览器内置回声消除，通常更稳定
+                                    echoCancellationType: "browser", // Use browser built-in echo cancellation, usually more stable
                                     noiseSuppression: true,
                                     autoGainControl: true,
-                                    latency: 0.02, // 降低延迟到20ms
+                                    latency: 0.02, // Reduce latency to 20ms
                                     sampleRate: 48000,
                                     sampleSize: 16,
                                     channelCount: 1
@@ -438,14 +438,14 @@
                     try {
                         if (!this.pc) return;
 
-                        // 创建 offer
+                        // Create offer
                         const offer = await this.pc.createOffer();
                         if (!this.pc) return;
 
                         await this.pc.setLocalDescription(offer);
 
-                        // 优化：不等待ICE收集完成，直接发送offer
-                        // 这可以显著减少连接建立时间
+                        // Optimization: Don't wait for ICE gathering to complete, send offer directly
+                        // This can significantly reduce connection establishment time
 
                         if (!this.pc) return;
                         this.isLoadingOffer = true;
@@ -494,7 +494,7 @@
                                 this.playMusicUrl(data["url"]);
                             }
                             if (data["type"] === "websocket" && data["state"] === "close") {
-                                this.messages.push({"role": "assistant", "content": "连接已断开（WebSocket 已关闭）"});
+                                this.messages.push({"role": "assistant", "content": "Connection disconnected (WebSocket closed)"});
                                 this.dataChannel.close();
                                 this.pc.close();
                                 this.endAndBack();
@@ -504,7 +504,7 @@
                                 this.messages.push({ "role": "user", "content": data["text"] });
                             } else if (data["type"] === "tts" && data["state"] === "sentence_start") {
                                 this.messages.push({ "role": "assistant", "content": data["text"] });
-                                if (data["text"].includes("请登录到控制面板添加设备，输入验证码：") && this.open_xiaozhi_url) {
+                                if (data["text"].includes("Please login to the control panel to add device, enter verification code:") && this.open_xiaozhi_url) {
                                     window.open("https://xiaozhi.me/console", "_blank");
                                     this.open_xiaozhi_url = false;
                                 }
@@ -528,20 +528,20 @@
                         this.stop();
                     }
 
-                    // 获取服务端 ICE 配置
+                    // Get server ICE configuration
                     let iceConfig = { iceServers: [], iceCandidatePoolSize: 0 };
                     try {
                         const resp = await fetch('/api/ice');
                         const data = await resp.json();
                         iceConfig = data;
-                        console.log('从服务器获取ICE配置:', iceConfig);
+                        console.log('Get ICE configuration from server:', iceConfig);
                         if (!iceConfig.iceServers || iceConfig.iceServers.length === 0) {
-                            console.warn('未配置 ICE 服务器，仅支持局域网直连');
+                            console.warn('No ICE servers configured, only supports LAN direct connection');
                         } else {
-                            console.log(`已配置 ${iceConfig.iceServers.length} 个ICE服务器，支持跨NAT连接`);
+                            console.log(`Configured ${iceConfig.iceServers.length} ICE servers, supports cross-NAT connection`);
                         }
                     } catch (e) {
-                        console.warn('获取 /api/ice 失败，使用空配置:', e);
+                        console.warn('Failed to get /api/ice, using empty configuration:', e);
                         iceConfig = { iceServers: [], iceCandidatePoolSize: 0 };
                     }
 

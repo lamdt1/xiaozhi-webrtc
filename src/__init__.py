@@ -12,13 +12,13 @@ from src.server import XiaoZhiServer
 from src.track.audio import AudioFaceSwapper
 from src.track.video import VideoFaceSwapper
 
-# 设置 logger
+# Setup logger
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger(__name__)
 
-# 禁用 aioice.ice 模块的日志输出
+# Disable aioice.ice module logging output
 logging.getLogger("aioice.ice").setLevel(logging.WARNING)
 
 ROOT = os.path.dirname(__file__)
@@ -26,28 +26,28 @@ ROOT = os.path.dirname(__file__)
 
 def get_client_ip(request):
     """
-    获取客户端真实IP地址
-    按优先级尝试多种方式获取，确保在各种部署环境下都能正确获取IP
+    Get client real IP address
+    Try multiple methods in priority order to ensure correct IP retrieval in various deployment environments
     """
-    # 1. X-Real-IP: 反向代理设置的真实IP (Nginx, Apache等)
+    # 1. X-Real-IP: Real IP set by reverse proxy (Nginx, Apache, etc.)
     real_ip = request.headers.get("X-Real-IP")
     if real_ip and real_ip != "unknown":
         return real_ip
 
-    # 2. X-Forwarded-For: 代理链中的IP列表，取第一个
+    # 2. X-Forwarded-For: IP list in proxy chain, take the first one
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
-        # 可能有多个IP，用逗号分隔，取第一个
+        # There may be multiple IPs, separated by commas, take the first one
         first_ip = forwarded_for.split(",")[0].strip()
         if first_ip and first_ip != "unknown":
             return first_ip
 
-    # 3. CF-Connecting-IP: Cloudflare设置的真实IP
+    # 3. CF-Connecting-IP: Real IP set by Cloudflare
     cf_ip = request.headers.get("CF-Connecting-IP")
     if cf_ip and cf_ip != "unknown":
         return cf_ip
 
-    # 4. X-Client-IP: 某些代理使用的头
+    # 4. X-Client-IP: Header used by some proxies
     client_ip = request.headers.get("X-Client-IP")
     if client_ip and client_ip != "unknown":
         return client_ip
@@ -71,7 +71,7 @@ async def chat(request):
 
 
 async def ice(request):
-    """返回ICE服务器配置"""
+    """Return ICE server configuration"""
     ice_servers_config = ice_config.get_ice_config()
     return web.Response(content_type="application/json", text=json.dumps(ice_servers_config, ensure_ascii=False))
 
@@ -80,14 +80,14 @@ async def offer(request):
     params = await request.json()
     _offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
-    # 使用动态ICE服务器配置
+    # Use dynamic ICE server configuration
     ice_servers = ice_config.get_server_ice_servers()
     configuration = RTCConfiguration(iceServers=ice_servers)
     pc = RTCPeerConnection(configuration=configuration)
     pcs.add(pc)
 
     # Store client IP in the peer connection object
-    # 使用改进的IP获取函数
+    # Use improved IP retrieval function
     pc.client_ip = get_client_ip(request)
     pc.mac_address = params.get("macAddress") or DEFAULT_MAC_ADDR
 
@@ -108,13 +108,13 @@ async def server(pc, offer):
     xiaozhi = XiaoZhiServer(pc)
     await xiaozhi.start()
 
-    # 监听来自客户端的 DataChannel
+    # Listen for DataChannel from client
     @pc.on("datachannel")
     def on_datachannel(channel):
 
         @channel.on("message")
         async def on_message(message):
-            logger.info("收到客户端消息 [%s %s]: %s", pc.mac_address, pc.client_ip, message)
+            logger.info("Received client message [%s %s]: %s", pc.mac_address, pc.client_ip, message)
             if xiaozhi.server is None:
                 await xiaozhi.start()
 
@@ -124,13 +124,13 @@ async def server(pc, offer):
 
             send_text_dict = {
                 "doublehit": {
-                    "Head": "拍了拍你的头",
-                    "Face": "拍了拍你的脸",
-                    "Body": "拍了拍你的身体",
+                    "Head": "patted your head",
+                    "Face": "patted your face",
+                    "Body": "patted your body",
                 },
                 "swipe": {
-                    "Head": "摸了摸你的头",
-                    "Face": "摸了摸你的脸",
+                    "Head": "touched your head",
+                    "Face": "touched your face",
                 },
             }
             send_text = send_text_dict.get(message.get("event", ""), {}).get(message.get("area", ""), "")
@@ -152,12 +152,12 @@ async def server(pc, offer):
         if track.kind == "audio":
             t = AudioFaceSwapper(xiaozhi, track)
             pc.addTrack(t)
-            # 将 track 实例存储在 pc 对象上
+            # Store track instance in pc object
             pc.audio_track = t
         elif track.kind == "video":
             t = VideoFaceSwapper(xiaozhi, track)
             pc.addTrack(t)
-            # 将 track 实例存储在 pc 对象上
+            # Store track instance in pc object
             pc.video_track = t
 
     await pc.setRemoteDescription(offer)
@@ -166,7 +166,7 @@ async def server(pc, offer):
 
 
 async def on_shutdown(app):
-    # close peer connections
+    # Close peer connections
     coros = [pc.close() for pc in pcs]
     await asyncio.gather(*coros)
     pcs.clear()

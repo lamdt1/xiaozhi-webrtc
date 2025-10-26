@@ -1,34 +1,34 @@
-# 回声消除配置文件
+# Echo Cancellation Configuration File
 # Echo Cancellation Configuration
 
 
 class EchoConfig:
-    """回声消除配置类"""
+    """Echo cancellation configuration class"""
 
-    # 自适应滤波器参数 - 更保守的设置以避免过度抑制
-    ADAPTIVE_FILTER_LENGTH = 1024  # 恢复到较小的滤波器长度
-    LEARNING_RATE = 0.02  # 降低学习率以避免过度调整
+    # Adaptive filter parameters - more conservative settings to avoid over-suppression
+    ADAPTIVE_FILTER_LENGTH = 1024  # Restore to smaller filter length
+    LEARNING_RATE = 0.02  # Reduce learning rate to avoid over-adjustment
 
-    # 缓冲区参数 - 适中的缓冲区大小
-    ECHO_BUFFER_SIZE = 100  # 回声缓冲区大小 (约2秒)
-    INPUT_BUFFER_SIZE = 50  # 输入缓冲区大小
+    # Buffer parameters - moderate buffer size
+    ECHO_BUFFER_SIZE = 100  # Echo buffer size (about 2 seconds)
+    INPUT_BUFFER_SIZE = 50  # Input buffer size
 
-    # 预热参数 - 更温和的预热处理
-    WARMUP_DURATION = 2.0  # 增加预热时间，让算法稳定
-    WARMUP_GAIN_FACTOR = 0.7  # 提高预热期间的增益因子，保留更多原始音频
+    # Warmup parameters - gentler warmup processing
+    WARMUP_DURATION = 2.0  # Increase warmup time to let algorithm stabilize
+    WARMUP_GAIN_FACTOR = 0.7  # Increase gain factor during warmup to preserve more original audio
 
-    # 噪声门限参数 - 更保守的门限设置
-    NOISE_GATE_THRESHOLD = 200  # 更低的门限，但配合更温和的衰减
-    NOISE_GATE_ATTENUATION = 0.3  # 减少衰减，保留更多音频信号
+    # Noise gate parameters - more conservative threshold settings
+    NOISE_GATE_THRESHOLD = 200  # Lower threshold, but with gentler attenuation
+    NOISE_GATE_ATTENUATION = 0.3  # Reduce attenuation to preserve more audio signal
 
-    # 音频处理参数
-    GAIN_FACTOR = 1.0  # 正常增益因子
-    SAMPLE_RATE = 48000  # 采样率
+    # Audio processing parameters
+    GAIN_FACTOR = 1.0  # Normal gain factor
+    SAMPLE_RATE = 48000  # Sample rate
 
-    # 客户端音频约束参数 - 优化以增强回声消除效果
+    # Client audio constraint parameters - optimized to enhance echo cancellation effect
     CLIENT_AUDIO_CONSTRAINTS = {
         "echoCancellation": True,
-        "echoCancellationType": "system",  # 使用系统级回声消除
+        "echoCancellationType": "system",  # Use system-level echo cancellation
         "noiseSuppression": True,
         "autoGainControl": True,
         "googEchoCancellation": True,
@@ -37,10 +37,10 @@ class EchoConfig:
         "googHighpassFilter": True,
         "googTypingNoiseDetection": True,
         "googAudioMirroring": False,
-        "googEchoCancellation2": True,  # 启用增强的回声消除
-        "googDAEchoCancellation": True,  # 启用数字音频回声消除
-        "googNoiseReduction": True,  # 额外的噪声抑制
-        "latency": 0.02,  # 增加到20ms延迟以改善回声消除效果
+        "googEchoCancellation2": True,  # Enable enhanced echo cancellation
+        "googDAEchoCancellation": True,  # Enable digital audio echo cancellation
+        "googNoiseReduction": True,  # Additional noise suppression
+        "latency": 0.02,  # Increase to 20ms latency to improve echo cancellation effect
         "sampleRate": 48000,
         "sampleSize": 16,
         "channelCount": 1,
@@ -48,20 +48,20 @@ class EchoConfig:
 
     @classmethod
     def get_adaptive_params(cls):
-        """获取自适应滤波器参数"""
+        """Get adaptive filter parameters"""
         return {"filter_length": cls.ADAPTIVE_FILTER_LENGTH, "learning_rate": cls.LEARNING_RATE}
 
     @classmethod
     def get_buffer_params(cls):
-        """获取缓冲区参数"""
+        """Get buffer parameters"""
         return {"echo_buffer_size": cls.ECHO_BUFFER_SIZE, "input_buffer_size": cls.INPUT_BUFFER_SIZE}
 
     @classmethod
     def get_warmup_params(cls):
-        """获取预热参数"""
+        """Get warmup parameters"""
         return {"duration": cls.WARMUP_DURATION, "gain_factor": cls.WARMUP_GAIN_FACTOR}
 
     @classmethod
     def get_noise_gate_params(cls):
-        """获取噪声门限参数"""
+        """Get noise gate parameters"""
         return {"threshold": cls.NOISE_GATE_THRESHOLD, "attenuation": cls.NOISE_GATE_ATTENUATION}

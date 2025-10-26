@@ -570,7 +570,7 @@
                 <div class="loading-overlay" v-if="isLoadingOffer">
                     <div class="loading-box">
                         <div class="spinner"></div>
-                        <div>正在建立连接…</div>
+                        <div>Establishing connection...</div>
                     </div>
                 </div>
             </div>
@@ -634,7 +634,7 @@
                             </svg>
                         </div>
                         <div class="push-to-talk-text">
-                            {{ isPushToTalkActive ? '松开结束' : '按住说话' }}
+                            {{ isPushToTalkActive ? 'Release to End' : 'Hold to Talk' }}
                         </div>
                     </button>
                 </div>
@@ -675,7 +675,7 @@
     </div>
 
     <script>
-        // URL 不再承载参数，改为从 localStorage 读取
+        // URL no longer carries parameters, changed to read from localStorage
 
         window.chatApp = new Vue({
             el: '#app',
@@ -695,28 +695,28 @@
                 currentAudio: null,
                 isLoadingOffer: false,
                 live2dManager: null,
-                // 摄像头状态相关
+                // Camera status related
                 cameraError: null,
                 hasCamera: true,
                 audioOnlyMode: false,
-                // 音频设备相关
-                audioInputDevices: [], // 可用的音频输入设备
-                selectedAudioDeviceId: '', // 当前选择的音频设备ID
-                audioOutputDevices: [], // 可用的音频输出设备
-                selectedSpeakerDeviceId: '', // 当前选择的扬声器设备ID
-                // 拖拽相关状态
+                // Audio device related
+                audioInputDevices: [], // Available audio input devices
+                selectedAudioDeviceId: '', // Currently selected audio device ID
+                audioOutputDevices: [], // Available audio output devices
+                selectedSpeakerDeviceId: '', // Currently selected speaker device ID
+                // Drag related state
                 isDragging: false,
                 dragStart: { x: 0, y: 0 },
                 videoPosition: { x: 16, y: 16 },
                 videoOffset: { x: 0, y: 0 },
-                // 贴边隐藏相关
-                edgePeekWidth: 20, // 隐藏后保留在屏幕内的可抓取宽度
-                edgeSnapThreshold: 32, // 结束拖拽时吸附到边缘的阈值
-                // 把手样式尺寸
+                // Edge hiding related
+                edgePeekWidth: 20, // Grabbable width remaining on screen after hiding
+                edgeSnapThreshold: 32, // Threshold for snapping to edge when ending drag
+                // Handle style dimensions
                 handleWidth: 28,
                 handleHeight: 56,
                 handleMargin: 6,
-                // 消息容器滑动手势相关状态
+                // Message container swipe gesture related state
                 isMoreMessageHidden: false,
                 swipeStartX: 0,
                 swipeStartY: 0,
@@ -724,37 +724,37 @@
                 isSwipeGesture: false,
                 minSwipeDistance: 50,
                 maxSwipeTime: 300,
-                // 消息容器触摸状态
+                // Message container touch state
                 isMessageContainerTouching: false,
                 messageScrollStartY: 0,
                 messageScrollStartX: 0,
                 messageScrollStartTime: 0,
                 hasScrollableContent: false,
                 isVerticalScrolling: false,
-                // 自适应音量控制
+                // Adaptive volume control
                 adaptiveVolumeControl: true,
-                maxVolume: 0.8, // 最大音量限制，防止回声
-                volumeAdjustmentRate: 0.02, // 音量调整速率
-                echoDetectionThreshold: 0.7, // 回声检测阈值
+                maxVolume: 0.8, // Maximum volume limit to prevent echo
+                volumeAdjustmentRate: 0.02, // Volume adjustment rate
+                echoDetectionThreshold: 0.7, // Echo detection threshold
                 lastVolumeAdjustTime: 0,
-                // 摄像头切换相关
+                // Camera switching related
                 isSwitchingCamera: false,
-                preferredFacingMode: 'user', // 'user' 前置，'environment' 后置
-                videoInputDevices: [], // 可用的视频输入设备
-                // 语音模式相关
-                voiceMode: 'continuous', // 'continuous' 或 'push-to-talk'
-                isPushToTalkActive: false, // 是否正在按住说话
-                audioTrackEnabled: true, // 音频轨道是否启用
-                // 触觉反馈相关
-                hasUserInteracted: false, // 是否有过用户手势交互
-                // 音频解锁与播放队列
+                preferredFacingMode: 'user', // 'user' front, 'environment' back
+                videoInputDevices: [], // Available video input devices
+                // Voice mode related
+                voiceMode: 'continuous', // 'continuous' or 'push-to-talk'
+                isPushToTalkActive: false, // Whether currently holding to talk
+                audioTrackEnabled: true, // Whether audio track is enabled
+                // Haptic feedback related
+                hasUserInteracted: false, // Whether there has been user gesture interaction
+                // Audio unlock and playback queue
                 audioUnlocked: false,
                 pendingMusicQueue: [],
                 hasShownAudioUnlockTip: false,
                 _audioCtx: null
             },
             mounted() {
-                // 从本地存储获取设置
+                // Get settings from local storage
                 try {
                     const savedMac = localStorage.getItem('macAddress');
                     const savedAudio = localStorage.getItem('selectedAudioDeviceId');
@@ -764,51 +764,51 @@
                     if (savedAudio) this.selectedAudioDeviceId = savedAudio;
                     if (savedSpeaker) this.selectedSpeakerDeviceId = savedSpeaker;
                     if (savedVoiceMode) this.voiceMode = savedVoiceMode;
-                } catch (e) { /* 忽略本地存储错误 */ }
+                } catch (e) { /* Ignore local storage errors */ }
                 this.initializeMedia().then(() => {
-                    // 枚举可用摄像头和麦克风
+                    // Enumerate available cameras and microphones
                     this.enumerateVideoInputs();
                     this.enumerateAudioInputs();
                     this.start();
                 }).catch((error) => {
-                    console.error('媒体初始化失败:', error);
-                    // 即使媒体初始化失败，也尝试启动连接（仅音频模式）
+                    console.error('Media initialization failed:', error);
+                    // Even if media initialization fails, try to start connection (audio-only mode)
                     this.start();
                 });
                 this.live2dManager = new Live2DManager();
                 this.live2dManager.initializeLive2D();
                 this.setInitialVideoPosition();
 
-                // 监听窗口大小变化
+                // Listen for window size changes
                 window.addEventListener('resize', this.handleWindowResize);
                 window.addEventListener('orientationchange', this.handleOrientationChange);
 
-                // 添加全局滑动手势监听器（仅在移动设备上）
+                // Add global swipe gesture listener (only on mobile devices)
                 if (window.innerWidth <= 768) {
-                    this.isMoreMessageHidden = true; // 移动端默认隐藏消息容器
+                    this.isMoreMessageHidden = true; // Mobile defaults to hiding message container
                     document.addEventListener('touchstart', this.handleGlobalTouchStart, { passive: false });
                     document.addEventListener('touchmove', this.handleGlobalTouchMove, { passive: false });
                     document.addEventListener('touchend', this.handleGlobalTouchEnd, { passive: false });
                 }
 
 
-                // 记录首次用户交互（避免浏览器在无用户手势时拦截震动），并尝试解锁音频
+                // Record first user interaction (avoid browser blocking vibration without user gesture) and try to unlock audio
                 this._onFirstUserInteract = () => { this.hasUserInteracted = true; this.unlockAudio(); };
                 window.addEventListener('pointerdown', this._onFirstUserInteract, { once: true, capture: true });
                 window.addEventListener('keydown', this._onFirstUserInteract, { once: true, capture: true });
             },
             beforeDestroy() {
-                // 清理事件监听器
+                // Clean up event listeners
                 window.removeEventListener('resize', this.handleWindowResize);
                 window.removeEventListener('orientationchange', this.handleOrientationChange);
 
-                // 清理滑动手势监听器
+                // Clean up swipe gesture listener
                 document.removeEventListener('touchstart', this.handleGlobalTouchStart);
                 document.removeEventListener('touchmove', this.handleGlobalTouchMove);
                 document.removeEventListener('touchend', this.handleGlobalTouchEnd);
 
 
-                // 清理首次用户交互监听
+                // Clean up first user interaction listener
                 if (this._onFirstUserInteract) {
                     window.removeEventListener('pointerdown', this._onFirstUserInteract, { capture: true });
                     window.removeEventListener('keydown', this._onFirstUserInteract, { capture: true });
@@ -825,14 +825,14 @@
                     const last = list[list.length - 1];
                     return last && last.content ? String(last.content) : '';
                 },
-                // 摄像头切换按钮位置（贴近本地预览视频右下角，且不越界）
+                // Camera switch button position (close to local preview video bottom-right corner, without going out of bounds)
                 cameraSwitchBtnStyle() {
-                    // 如果没有摄像头，返回隐藏样式
+                    // If no camera, return hidden style
                     if (!this.hasCamera) {
                         return { display: 'none' };
                     }
 
-                    // 直接基于本地预览的固定定位坐标与尺寸计算，确保拖动时实时跟随
+                    // Directly calculate based on local preview's fixed positioning coordinates and dimensions, ensuring real-time following during drag
                     const { x, y } = this.videoPosition;
                     const video = this.$refs.localVideo;
                     const btnSize = 44;
@@ -843,34 +843,34 @@
                         vw = rect.width;
                         vh = rect.height;
                     } else {
-                        // 回退：根据已知本地预览尺寸估算
+                        // Fallback: estimate based on known local preview dimensions
                         const isMobile = (window.innerWidth || 0) <= 768;
                         vw = isMobile ? 135 : 240;
                         vh = isMobile ? 240 : 135;
                     }
                     let left = x + vw - btnSize - margin;
                     let top = y + vh - btnSize - margin;
-                    // 约束在视窗内
+                    // Constrain within viewport
                     left = Math.max(6, Math.min(left, window.innerWidth - btnSize - 6));
                     top = Math.max(6, Math.min(top, window.innerHeight - btnSize - 6));
                     return { left: left + 'px', top: top + 'px' };
                 },
-                // 是否处于左右隐藏状态（仅基于位置阈值，避免依赖 DOM 尺寸抖动）
+                // Whether in left/right hidden state (only based on position threshold, avoid depending on DOM size jitter)
                 isEdgeHiddenLeft() {
-                    // 如果没有摄像头，不存在隐藏状态
+                    // If no camera, no hidden state exists
                     if (!this.hasCamera) return false;
-                    // 只要超出左边界一点，就认为处于左侧隐藏状态，确保把手可见
+                    // As long as it exceeds the left boundary a bit, consider it in left hidden state, ensuring handle is visible
                     return this.videoPosition.x <= -1;
                 },
                 isEdgeHiddenRight() {
-                    // 如果没有摄像头，不存在隐藏状态
+                    // If no camera, no hidden state exists
                     if (!this.hasCamera) return false;
                     const windowWidth = window.innerWidth || 0;
                     const rightHiddenEdge = windowWidth - this.edgePeekWidth;
                     return this.videoPosition.x >= rightHiddenEdge - 1;
                 },
                 edgeHandleStyle() {
-                    // 如果没有摄像头，直接隐藏
+                    // If no camera, hide directly
                     if (!this.hasCamera) return { display: 'none' };
 
                     const video = this.$refs.localVideo;
@@ -879,7 +879,7 @@
                     const videoHeight = rect.height || 0;
                     const windowHeight = window.innerHeight || 0;
 
-                    // 仅在左右隐藏时显示
+                    // Only show when left/right hidden
                     if (!this.isEdgeHiddenLeft && !this.isEdgeHiddenRight) return { display: 'none' };
 
                     const centerY = this.videoPosition.y + videoHeight / 2;
@@ -904,15 +904,15 @@
             methods: {
                 async initializeMedia() {
                     try {
-                        // 首先检查设备是否支持媒体设备访问
+                        // First check if device supports media device access
                         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                             throw new Error('UNSUPPORTED_BROWSER');
                         }
 
-                        // 音频配置
+                        // Audio configuration
                         const audioConstraints = {
                             echoCancellation: true,
-                            echoCancellationType: "system", // 使用系统级回声消除
+                            echoCancellationType: "system", // Use system-level echo cancellation
                             noiseSuppression: true,
                             autoGainControl: true,
                             googEchoCancellation: true,
@@ -921,21 +921,21 @@
                             googHighpassFilter: true,
                             googTypingNoiseDetection: true,
                             googAudioMirroring: false,
-                            googEchoCancellation2: true, // 启用增强的回声消除
-                            googDAEchoCancellation: true, // 启用数字音频回声消除
-                            googNoiseReduction: true, // 额外的噪声抑制
-                            latency: 0.02, // 20ms延迟以改善回声消除效果
+                            googEchoCancellation2: true, // Enable enhanced echo cancellation
+                            googDAEchoCancellation: true, // Enable digital audio echo cancellation
+                            googNoiseReduction: true, // Additional noise suppression
+                            latency: 0.02, // 20ms latency to improve echo cancellation effect
                             sampleRate: 48000,
                             sampleSize: 16,
                             channelCount: 1
                         };
 
-                        // 如果指定了音频设备，添加到约束中
+                        // If audio device is specified, add to constraints
                         if (this.selectedAudioDeviceId) {
                             audioConstraints.deviceId = { exact: this.selectedAudioDeviceId };
                         }
 
-                        // 尝试获取摄像头和音频
+                        // Try to get camera and audio
                         try {
                             const videoConstraints = {
                                 width: 640,
@@ -952,15 +952,15 @@
                         this.audioOnlyMode = false;
                         this.cameraError = null;
 
-                        // 如果是按住说话模式，初始时禁用音频轨道
+                        // If in push-to-talk mode, initially disable audio track
                         if (this.voiceMode === 'push-to-talk') {
                             this.disableAudioTrack();
                         }
 
                         } catch (videoError) {
-                            console.warn('摄像头访问失败，尝试仅音频模式:', videoError);
+                            console.warn('Camera access failed, trying audio-only mode:', videoError);
 
-                            // 尝试仅音频模式
+                            // Try audio-only mode
                             try {
                                 this.localStream = await navigator.mediaDevices.getUserMedia({
                                     video: false,
@@ -971,19 +971,19 @@
                                 this.audioOnlyMode = true;
                                 this.cameraError = this.getCameraErrorMessage(videoError);
 
-                                // 如果是按住说话模式，初始时禁用音频轨道
+                                // If in push-to-talk mode, initially disable audio track
                                 if (this.voiceMode === 'push-to-talk') {
                                     this.disableAudioTrack();
                                 }
 
-                                // // 显示音频模式提示
+                                // // Show audio mode notification
                                 // this.messages.push({
                                 //     role: "assistant",
-                                //     content: `摄像头不可用（${this.cameraError}），已切换到仅音频模式`
+                                //     content: `Camera unavailable (${this.cameraError}), switched to audio-only mode`
                                 // });
 
                             } catch (audioError) {
-                                console.error('音频访问也失败:', audioError);
+                                console.error('Audio access also failed:', audioError);
                                 throw audioError;
                             }
                         }
@@ -994,7 +994,7 @@
                         this.hasCamera = false;
                         this.audioOnlyMode = false;
 
-                        // 显示用户友好的错误消息
+                        // Show user-friendly error message
                         this.showMediaError(error);
                         throw error;
                     }
@@ -1004,24 +1004,24 @@
                     switch (error.name || error.message) {
                         case 'NotAllowedError':
                         case 'PermissionDeniedError':
-                            return '权限被拒绝';
+                            return 'Permission denied';
                         case 'NotFoundError':
                         case 'DevicesNotFoundError':
-                            return '未找到摄像头设备';
+                            return 'Camera device not found';
                         case 'NotReadableError':
                         case 'TrackStartError':
-                            return '设备被其他应用占用';
+                            return 'Device is being used by another application';
                         case 'OverconstrainedError':
                         case 'ConstraintNotSatisfiedError':
-                            return '设备不支持请求的配置';
+                            return 'Device does not support requested configuration';
                         case 'NotSupportedError':
-                            return '浏览器不支持';
+                            return 'Browser not supported';
                         case 'UNSUPPORTED_BROWSER':
-                            return '浏览器版本过低';
+                            return 'Browser version too low';
                         case 'TypeError':
-                            return '配置参数错误';
+                            return 'Configuration parameter error';
                         default:
-                            return '未知错误';
+                            return 'Unknown error';
                     }
                 },
 
@@ -1068,7 +1068,7 @@
                         const devices = await navigator.mediaDevices.enumerateDevices();
                         this.videoInputDevices = devices.filter(d => d.kind === 'videoinput');
                     } catch (e) {
-                        console.warn('枚举视频设备失败:', e);
+                        console.warn('Failed to enumerate video devices:', e);
                     }
                 },
 
@@ -1081,35 +1081,35 @@
                         // console.log("this.audioInputDevices", this.audioInputDevices)
                         // console.log("this.audioOutputDevices", this.audioOutputDevices)
 
-                        // console.log('可用音频输入设备:', this.audioInputDevices.map(d => ({
+                        // console.log('Available audio input devices:', this.audioInputDevices.map(d => ({
                         //     deviceId: d.deviceId,
                         //     label: d.label || '未知设备'
                         // })));
 
-                        // console.log('可用音频输出设备:', this.audioOutputDevices.map(d => ({
+                        // console.log('Available audio output devices:', this.audioOutputDevices.map(d => ({
                         //     deviceId: d.deviceId,
                         //     label: d.label || '未知设备'
                         // })));
 
-                        // 验证从URL参数传入的设备ID是否有效
+                        // Validate if device IDs passed from URL parameters are valid
                         if (this.selectedAudioDeviceId) {
                             const deviceExists = this.audioInputDevices.some(d => d.deviceId === this.selectedAudioDeviceId);
                             if (!deviceExists) {
-                                console.warn('指定的音频输入设备不存在，将使用默认设备');
+                                console.warn('Specified audio input device does not exist, will use default device');
                                 this.selectedAudioDeviceId = '';
                             }
                         }
 
-                        // 验证从URL参数传入的扬声器设备ID是否有效
+                        // Validate if speaker device ID passed from URL parameters is valid
                         if (this.selectedSpeakerDeviceId) {
                             const deviceExists = this.audioOutputDevices.some(d => d.deviceId === this.selectedSpeakerDeviceId);
                             if (!deviceExists) {
-                                console.warn('指定的扬声器设备不存在，将使用默认设备');
+                                console.warn('Specified speaker device does not exist, will use default device');
                                 this.selectedSpeakerDeviceId = '';
                             }
                         }
                     } catch (e) {
-                        console.warn('枚举音频设备失败:', e);
+                        console.warn('Failed to enumerate audio devices:', e);
                     }
                 },
 
@@ -1168,7 +1168,7 @@
                             if (t !== newVideoTrack) t.stop();
                         });
                     } catch (err) {
-                        console.error('切换摄像头失败:', err);
+                        console.error('Failed to switch camera:', err);
                         this.messages.push({
                             role: "assistant",
                             content: `摄像头切换失败: ${this.getCameraErrorMessage(err)}`
@@ -1312,7 +1312,7 @@
                                     // 确保远程视频也使用选择的扬声器设备
                                     this.applySpeakerDevice(this.$refs.remoteVideo);
 
-                                    console.log(`设置音量: 请求=${requestedVolume.toFixed(2)}, 实际=${finalVolume.toFixed(2)}`);
+                                    console.log(`Set volume: requested=${requestedVolume.toFixed(2)}, actual=${finalVolume.toFixed(2)}`);
                                 } else if (data["text"] === "open_tab") {
                                     window.open(data["value"], "_blank");
                                 } else if (data["text"] === "stop_music") {
@@ -1342,12 +1342,12 @@
                         iceConfig = data;
                         // console.log('从服务器获取ICE配置:', iceConfig);
                         if (!iceConfig.iceServers || iceConfig.iceServers.length === 0) {
-                            console.warn('未配置 ICE 服务器，仅支持局域网直连');
+                            console.warn('No ICE servers configured, only supports LAN direct connection');
                         } else {
-                            console.log(`已配置 ${iceConfig.iceServers.length} 个ICE服务器，支持跨NAT连接`);
+                            console.log(`Configured ${iceConfig.iceServers.length} ICE servers, supports cross-NAT connection`);
                         }
                     } catch (e) {
-                        console.warn('获取 /api/ice 失败，使用空配置:', e);
+                        console.warn('Failed to get /api/ice, using empty configuration:', e);
                         iceConfig = { iceServers: [], iceCandidatePoolSize: 0 };
                     }
 
@@ -1533,7 +1533,7 @@
                             this.pendingMusicQueue.push(url);
                             this.audioUnlocked = false; // 重新等待手势解锁
                             this.promptAudioUnlockMessageOnce();
-                            console.warn('audio.play() 被阻止，等待解锁:', err);
+                            console.warn('audio.play() blocked, waiting for unlock:', err);
                         });
                         audio.addEventListener('ended', () => { if (this.currentAudio === audio) { this.currentAudio = null; } });
                         audio.addEventListener('error', () => { if (this.currentAudio === audio) { this.currentAudio = null; } });
@@ -1567,16 +1567,16 @@
                         if ('setSinkId' in audioElement) {
                             audioElement.setSinkId(this.selectedSpeakerDeviceId)
                                 .then(() => {
-                                    // console.log('扬声器设备设置成功:', this.selectedSpeakerDeviceId);
+                                    // console.log('Speaker device set successfully:', this.selectedSpeakerDeviceId);
                                 })
                                 .catch((error) => {
-                                    console.warn('设置扬声器设备失败:', error);
+                                    console.warn('Failed to set speaker device:', error);
                                 });
                         } else {
-                            console.warn('当前浏览器不支持 setSinkId，无法指定扬声器设备');
+                            console.warn('Current browser does not support setSinkId, cannot specify speaker device');
                         }
                     } catch (error) {
-                        console.error('应用扬声器设备时出错:', error);
+                        console.error('Error applying speaker device:', error);
                     }
                 },
 
@@ -1600,7 +1600,7 @@
                         // 如果音频强度过高，降低音量
                         if (normalizedLevel > this.echoDetectionThreshold && currentVolume > 0.3) {
                             newVolume = Math.max(0.3, currentVolume - this.volumeAdjustmentRate);
-                            console.log(`检测到高音频强度 (${normalizedLevel.toFixed(2)})，降低音量至 ${newVolume.toFixed(2)}`);
+                            console.log(`Detected high audio intensity (${normalizedLevel.toFixed(2)}), reducing volume to ${newVolume.toFixed(2)}`);
                         }
                         // 如果音频强度适中且音量较低，适当提高音量
                         else if (normalizedLevel < 0.4 && currentVolume < this.maxVolume) {
@@ -1953,7 +1953,7 @@
                     this.isPushToTalkActive = true;
                     this.enableAudioTrack();
 
-                    console.log('开始按住说话');
+                    console.log('Start push-to-talk');
                 },
 
                 stopPushToTalk() {
@@ -1962,7 +1962,7 @@
                     this.isPushToTalkActive = false;
                     this.disableAudioTrack();
 
-                    console.log('结束按住说话');
+                    console.log('End push-to-talk');
                 },
 
                 // 启用音频轨道

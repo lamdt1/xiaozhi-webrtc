@@ -1,113 +1,113 @@
 """
-回声消除管理器使用示例
+Echo Cancellation Manager Usage Examples
 Echo Cancellation Manager Usage Examples
 """
 
-# 示例1: 基本使用
+# Example 1: Basic usage
 from src.audio.echo_manager import EchoCancellationManager
 
-# 创建管理器
+# Create manager
 echo_manager = EchoCancellationManager(enable_echo_cancellation=True, enable_debug=True)
 
 
-# 处理音频的典型流程
+# Typical audio processing workflow
 def process_audio_example(microphone_audio, speaker_audio):
     """
-    音频处理示例
+    Audio processing example
 
     Args:
-        microphone_audio: 麦克风输入的音频数据
-        speaker_audio: 扬声器输出的音频数据
+        microphone_audio: Microphone input audio data
+        speaker_audio: Speaker output audio data
     """
-    # 1. 更新参考音频（扬声器输出）
+    # 1. Update reference audio (speaker output)
     echo_manager.update_reference_audio(speaker_audio)
 
-    # 2. 处理麦克风音频（消除回声）
+    # 2. Process microphone audio (echo cancellation)
     cleaned_audio = echo_manager.process_microphone_audio(microphone_audio)
 
     return cleaned_audio
 
 
-# 示例2: 动态配置
+# Example 2: Dynamic configuration
 def configure_echo_cancellation_example():
-    """配置回声消除参数的示例"""
+    """Example of configuring echo cancellation parameters"""
 
-    # 创建管理器
+    # Create manager
     manager = EchoCancellationManager()
 
-    # 动态调整参数
+    # Dynamically adjust parameters
     manager.set_parameters(
         enable_echo_cancellation=True,
-        min_energy_ratio=0.15,  # 调整最小能量比例
-        mix_ratio=0.25,  # 调整混合比例
-        debug_interval=100,  # 调整调试输出频率
+        min_energy_ratio=0.15,  # Adjust minimum energy ratio
+        mix_ratio=0.25,  # Adjust mixing ratio
+        debug_interval=100,  # Adjust debug output frequency
     )
 
-    # 获取统计信息
+    # Get statistics
     stats = manager.get_statistics()
-    print(f"处理帧数: {stats['manager_stats']['total_frames']}")
-    print(f"过度抑制率: {stats['manager_stats']['over_suppression_rate']:.3f}")
+    print(f"Processed frames: {stats['manager_stats']['total_frames']}")
+    print(f"Over-suppression rate: {stats['manager_stats']['over_suppression_rate']:.3f}")
 
     return manager
 
 
-# 示例3: 在AudioFaceSwapper中的使用
+# Example 3: Usage in AudioFaceSwapper
 def audio_face_swapper_example():
-    """AudioFaceSwapper中的使用示例"""
+    """Example of usage in AudioFaceSwapper"""
 
-    # 假设有一个AudioFaceSwapper实例
+    # Assume there's an AudioFaceSwapper instance
     # audio_swapper = AudioFaceSwapper(xiaozhi, track)
 
-    # 获取回声消除统计信息
+    # Get echo cancellation statistics
     # stats = audio_swapper.get_echo_cancellation_stats()
-    # print(f"回声检测率: {stats['echo_canceller_stats']['echo_detection_rate']:.3f}")
+    # print(f"Echo detection rate: {stats['echo_canceller_stats']['echo_detection_rate']:.3f}")
 
-    # 临时禁用回声消除
+    # Temporarily disable echo cancellation
     # audio_swapper.set_echo_cancellation_enabled(False)
 
-    # 调整回声消除参数
+    # Adjust echo cancellation parameters
     # audio_swapper.configure_echo_cancellation(
     #     min_energy_ratio=0.2,
     #     mix_ratio=0.4
     # )
 
-    # 重置回声消除状态
+    # Reset echo cancellation state
     # audio_swapper.reset_echo_cancellation()
 
     pass
 
 
-# 示例4: 高级配置场景
+# Example 4: Advanced configuration scenarios
 def advanced_configuration_example():
-    """高级配置场景示例"""
+    """Advanced configuration scenario examples"""
 
-    # 为不同场景创建不同配置的管理器
+    # Create managers with different configurations for different scenarios
 
-    # 安静环境配置 - 更激进的回声消除
+    # Quiet environment configuration - more aggressive echo cancellation
     quiet_environment = EchoCancellationManager(enable_echo_cancellation=True, enable_debug=False)
-    quiet_environment.set_parameters(min_energy_ratio=0.05, mix_ratio=0.2)  # 更低的阈值  # 更少的原始音频混合
+    quiet_environment.set_parameters(min_energy_ratio=0.05, mix_ratio=0.2)  # Lower threshold  # Less original audio mixing
 
-    # 嘈杂环境配置 - 更保守的回声消除
+    # Noisy environment configuration - more conservative echo cancellation
     noisy_environment = EchoCancellationManager(enable_echo_cancellation=True, enable_debug=True)
-    noisy_environment.set_parameters(min_energy_ratio=0.3, mix_ratio=0.5)  # 更高的阈值  # 更多的原始音频混合
+    noisy_environment.set_parameters(min_energy_ratio=0.3, mix_ratio=0.5)  # Higher threshold  # More original audio mixing
 
-    # 调试模式配置 - 详细的日志输出
+    # Debug mode configuration - detailed log output
     debug_mode = EchoCancellationManager(enable_echo_cancellation=True, enable_debug=True)
-    debug_mode.set_parameters(debug_interval=50)  # 更频繁的调试输出
+    debug_mode.set_parameters(debug_interval=50)  # More frequent debug output
 
     return {"quiet": quiet_environment, "noisy": noisy_environment, "debug": debug_mode}
 
 
 if __name__ == "__main__":
-    print("回声消除管理器使用示例")
+    print("Echo Cancellation Manager Usage Examples")
     print("=" * 50)
 
-    # 运行配置示例
+    # Run configuration example
     manager = configure_echo_cancellation_example()
-    print(f"管理器创建成功: {manager}")
+    print(f"Manager created successfully: {manager}")
 
-    # 运行高级配置示例
+    # Run advanced configuration example
     configs = advanced_configuration_example()
-    print(f"创建了 {len(configs)} 种配置")
+    print(f"Created {len(configs)} configurations")
 
-    print("示例运行完成!")
+    print("Examples completed!")

@@ -5,10 +5,10 @@ from aiortc import RTCIceServer
 
 
 class ICEConfig:
-    """ICE服务器配置管理类"""
+    """ICE server configuration management class"""
 
     def __init__(self):
-        # 默认STUN服务器
+        # Default STUN servers
         self.default_stun_urls = [
             "stun:stun.miwifi.com:3478",
             "stun:stun.l.google.com:19302",
@@ -17,25 +17,25 @@ class ICEConfig:
         ]
 
     def get_ice_config(self) -> Dict[str, Any]:
-        """获取前端ICE配置"""
+        """Get frontend ICE configuration"""
         ice_servers = []
 
-        # 添加默认STUN服务器
+        # Add default STUN servers
         for url in self.default_stun_urls:
             ice_servers.append({"urls": url})
 
         return {"iceServers": ice_servers, "iceCandidatePoolSize": 10, "iceTransportPolicy": "all"}
 
     def get_server_ice_servers(self) -> List[RTCIceServer]:
-        """获取服务器端ICE服务器对象"""
+        """Get server-side ICE server objects"""
         servers = []
 
-        # 添加默认STUN服务器
+        # Add default STUN servers
         for url in self.default_stun_urls:
             servers.append(RTCIceServer(urls=url))
 
         return servers
 
 
-# 全局实例
+# Global instance
 ice_config = ICEConfig()
