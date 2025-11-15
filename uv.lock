@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.12' and sys_platform == 'darwin'",
@@ -2153,7 +2153,7 @@ wheels = [
 
 [[package]]
 name = "xiaozhi-sdk"
-version = "0.2.9"
+version = "0.3.3"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -2174,9 +2174,9 @@ dependencies = [
     { name = "soundfile" },
     { name = "websockets" },
 ]
-sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/9a/92/7629cfa944c743fad882ba0360c79bc8e112f112b33168c0561a65fdc5aa/xiaozhi_sdk-0.2.9.tar.gz", hash = "sha256:3e621646f57c06fe3a076a008370981ca7935da77d2fa2ff6c0f712a4e96d9e9", size = 1795344, upload-time = "2025-10-20T14:22:23.188Z" }
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/88/4b/169373ef1b826b9d5f8caced917358494da3062a5197a0a655710fd3ec71/xiaozhi_sdk-0.3.3.tar.gz", hash = "sha256:c9be3a1c26959ff5e848686fddfe5e08cc6bdd12c8a5a84e447407158d71c1dd", size = 1795482, upload-time = "2025-11-11T16:11:03.251Z" }
 wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/85/1b/a99da0fa9b2639a4bb43f8626716d58685e245c972f9f079953c863546f6/xiaozhi_sdk-0.2.9-py3-none-any.whl", hash = "sha256:ce04b3b873f000051d1590d7225e11f9129d5c5bc380dc096a6338ffa45c1178", size = 1793010, upload-time = "2025-10-20T14:22:21.343Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/38/af/e51d734e4f6f1c5e9444f5ee064442cae10d83fb6c4d26ffd9256b86e69d/xiaozhi_sdk-0.3.3-py3-none-any.whl", hash = "sha256:ba8c0120f0320b6f7b438861bc2c77be322048d44b0fd3d9bd7cc035411528a7", size = 1793294, upload-time = "2025-11-11T16:11:01.114Z" },
 ]
 
 [[package]]
@@ -2232,7 +2232,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.31.0" },
     { name = "sounddevice", specifier = ">=0.5.0" },
     { name = "websockets", specifier = ">=11.0.3" },
-    { name = "xiaozhi-sdk", specifier = ">=0.2.9" },
+    { name = "xiaozhi-sdk", specifier = ">=0.3.3" },
 ]
 provides-extras = ["dev"]
 

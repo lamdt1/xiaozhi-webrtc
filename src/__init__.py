@@ -183,5 +183,6 @@ def run():
     app.router.add_get("/api/ice", ice)
     app.router.add_post("/api/offer", offer)
     app.router.add_static("/static/", path=os.path.join(ROOT, "static"), name="static")
+    app.router.add_static("/image/", path=os.path.join(ROOT, "image"), name="image")
 
     web.run_app(app, host="0.0.0.0", port=PORT)
