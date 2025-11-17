@@ -751,9 +751,21 @@
                 audioUnlocked: false,
                 pendingMusicQueue: [],
                 hasShownAudioUnlockTip: false,
-                _audioCtx: null
+                _audioCtx: null,
+                // 连接统计
+                connectionStats: {
+                    attempts: 0,
+                    successes: 0,
+                    failures: 0,
+                    lastAttemptTime: null,
+                    lastSuccessTime: null,
+                    iceGatheringDuration: 0
+                }
             },
             mounted() {
+                // 网络环境诊断
+                this.diagnoseNetworkEnvironment();
+                
                 // 从本地存储获取设置
                 try {
                     const savedMac = localStorage.getItem('macAddress');
@@ -902,6 +914,61 @@
                 }
             },
             methods: {
+                // 网络环境诊断
+                diagnoseNetworkEnvironment() {
+                    console.log('=== WebRTC 连接诊断信息 ===');
+                    
+                    // 1. 检测网络连接类型
+                    if (navigator.connection || navigator.mozConnection || navigator.webkitConnection) {
+                        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                        console.log('网络类型:', connection.effectiveType || connection.type || 'unknown');
+                        console.log('下行带宽:', connection.downlink ? connection.downlink + ' Mbps' : 'unknown');
+                        console.log('RTT (往返时间):', connection.rtt ? connection.rtt + ' ms' : 'unknown');
+                    } else {
+                        console.log('网络类型: 浏览器不支持 Network Information API');
+                    }
+                    
+                    // 2. 检测是否在安全上下文（HTTPS）
+                    console.log('安全上下文 (HTTPS):', window.isSecureContext ? '✅ 是' : '⚠️ 否（某些功能可能受限）');
+                    
+                    // 3. 检测 WebRTC 支持情况
+                    console.log('WebRTC 支持:');
+                    console.log('  - RTCPeerConnection:', typeof RTCPeerConnection !== 'undefined' ? '✅' : '❌');
+                    console.log('  - getUserMedia:', !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? '✅' : '❌');
+                    console.log('  - DataChannel:', typeof RTCDataChannel !== 'undefined' ? '✅' : '❌');
+                    
+                    // 4. 检测浏览器信息
+                    const ua = navigator.userAgent;
+                    let browserName = 'Unknown';
+                    if (ua.indexOf('Chrome') > -1 && ua.indexOf('Edg') === -1) browserName = 'Chrome';
+                    else if (ua.indexOf('Safari') > -1 && ua.indexOf('Chrome') === -1) browserName = 'Safari';
+                    else if (ua.indexOf('Firefox') > -1) browserName = 'Firefox';
+                    else if (ua.indexOf('Edg') > -1) browserName = 'Edge';
+                    console.log('浏览器:', browserName);
+                    
+                    // 5. 检测设备类型
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+                    console.log('设备类型:', isMobile ? '移动设备' : '桌面设备');
+                    
+                    // 6. 检测是否在局域网
+                    console.log('当前页面 URL:', window.location.href);
+                    const hostname = window.location.hostname;
+                    const isLocalNetwork = hostname === 'localhost' || 
+                                          hostname === '127.0.0.1' || 
+                                          hostname.startsWith('192.168.') || 
+                                          hostname.startsWith('10.') ||
+                                          hostname.startsWith('172.16.') ||
+                                          hostname.endsWith('.local');
+                    console.log('可能在局域网:', isLocalNetwork ? '✅ 是（WebRTC 直连更容易成功）' : '⚠️ 否（可能需要 STUN/TURN）');
+                    
+                    console.log('=========================');
+                    
+                    // 7. 常见问题提示
+                    if (!window.isSecureContext && !isLocalNetwork) {
+                        console.warn('⚠️ 警告：非 HTTPS 环境且非本地网络，getUserMedia 可能被阻止');
+                    }
+                },
+                
                 async initializeMedia() {
                     try {
                         // 首先检查设备是否支持媒体设备访问
@@ -1207,6 +1274,11 @@
                     this.checkScrollableContent();
                 },
                 async negotiate() {
+                    // 记录连接尝试
+                    this.connectionStats.attempts++;
+                    this.connectionStats.lastAttemptTime = new Date();
+                    const startTime = performance.now();
+                    
                     try {
                         if (!this.pc) return;
 
@@ -1216,8 +1288,19 @@
 
                         await this.pc.setLocalDescription(offer);
 
-                        // 优化：不等待ICE收集完成，直接发送offer
-                        // 这可以显著减少连接建立时间
+                        // 等待 ICE 候选收集完成，确保 SDP 包含所有候选信息
+                        // 这样可以提高连接成功率，避免"有时连上有时连不上"的问题
+                        console.log('⏳ 等待 ICE 候选收集完成...');
+                        const iceStartTime = performance.now();
+                        const iceGatheringComplete = await this.waitForICEGathering();
+                        const iceEndTime = performance.now();
+                        this.connectionStats.iceGatheringDuration = Math.round(iceEndTime - iceStartTime);
+                        
+                        if (!iceGatheringComplete) {
+                            console.warn('⚠️ ICE 收集超时，使用当前已收集的候选');
+                        } else {
+                            console.log(`✅ ICE 候选收集完成 (耗时 ${this.connectionStats.iceGatheringDuration}ms)，准备发送 offer`);
+                        }
 
                         if (!this.pc) return;
                         this.isLoadingOffer = true;
@@ -1236,13 +1319,67 @@
                         if (!this.pc) return;
 
                         await this.pc.setRemoteDescription(answer);
+                        
+                        const endTime = performance.now();
+                        const totalDuration = Math.round(endTime - startTime);
+                        console.log(`✅ 协商完成 (总耗时 ${totalDuration}ms)`);
 
                     } catch (error) {
-                        console.error('Error during negotiation:', error);
-                        alert('Error during negotiation: ' + error.message);
+                        this.connectionStats.failures++;
+                        console.error('❌ 协商过程出错:', error);
+                        console.error('连接统计:', {
+                            尝试次数: this.connectionStats.attempts,
+                            成功次数: this.connectionStats.successes,
+                            失败次数: this.connectionStats.failures,
+                            成功率: this.connectionStats.attempts > 0 ? 
+                                ((this.connectionStats.successes / this.connectionStats.attempts) * 100).toFixed(1) + '%' : 'N/A'
+                        });
+                        
+                        this.messages.push({
+                            role: "assistant",
+                            content: `连接协商失败: ${error.message}`
+                        });
+                        this.$nextTick(() => { this.scrollToBottom(); });
                     } finally {
                         // this.isLoadingOffer = false;
                     }
+                },
+                
+                // 等待 ICE 候选收集完成
+                waitForICEGathering(timeout = 5000) {
+                    return new Promise((resolve) => {
+                        if (!this.pc) {
+                            resolve(false);
+                            return;
+                        }
+
+                        // 如果已经完成，直接返回
+                        if (this.pc.iceGatheringState === 'complete') {
+                            console.log('ICE 候选已经收集完成');
+                            resolve(true);
+                            return;
+                        }
+
+                        // 设置超时，避免无限等待
+                        const timeoutId = setTimeout(() => {
+                            console.warn(`ICE 收集超时 (${timeout}ms)，当前状态: ${this.pc?.iceGatheringState}`);
+                            this.pc?.removeEventListener('icegatheringstatechange', onStateChange);
+                            resolve(false);
+                        }, timeout);
+
+                        // 监听状态变化
+                        const onStateChange = () => {
+                            console.log('ICE gathering state changed:', this.pc?.iceGatheringState);
+                            if (this.pc?.iceGatheringState === 'complete') {
+                                clearTimeout(timeoutId);
+                                this.pc.removeEventListener('icegatheringstatechange', onStateChange);
+                                console.log('✅ ICE 候选收集完成');
+                                resolve(true);
+                            }
+                        };
+
+                        this.pc.addEventListener('icegatheringstatechange', onStateChange);
+                    });
                 },
                 setupDataChannel() {
                     this.dataChannel = this.pc.createDataChannel('chat');
@@ -1340,15 +1477,38 @@
                         const resp = await fetch('/api/ice');
                         const data = await resp.json();
                         iceConfig = data;
-                        // console.log('从服务器获取ICE配置:', iceConfig);
+                        console.log('从服务器获取ICE配置:', JSON.stringify(iceConfig, null, 2));
+                        
                         if (!iceConfig.iceServers || iceConfig.iceServers.length === 0) {
-                            console.warn('未配置 ICE 服务器，仅支持局域网直连');
+                            console.warn('⚠️ 未配置 ICE 服务器，仅支持局域网直连');
+                            console.warn('如果客户端不在同一局域网，连接可能会失败');
+                            
+                            // 提示用户
+                            this.messages.push({
+                                role: "assistant",
+                                content: "📡 提示：未配置 STUN/TURN 服务器，仅支持局域网连接。如果连接失败，请配置 ICE 服务器。"
+                            });
+                            this.$nextTick(() => { this.scrollToBottom(); });
                         } else {
-                            console.log(`已配置 ${iceConfig.iceServers.length} 个ICE服务器，支持跨NAT连接`);
+                            console.log(`✅ 已配置 ${iceConfig.iceServers.length} 个ICE服务器，支持跨NAT连接`);
+                            
+                            // 打印每个 ICE 服务器的详细信息
+                            iceConfig.iceServers.forEach((server, index) => {
+                                console.log(`  ICE服务器 ${index + 1}:`, {
+                                    urls: server.urls,
+                                    hasCredentials: !!(server.username && server.credential)
+                                });
+                            });
                         }
                     } catch (e) {
-                        console.warn('获取 /api/ice 失败，使用空配置:', e);
+                        console.error('❌ 获取 /api/ice 失败，使用空配置:', e);
                         iceConfig = { iceServers: [], iceCandidatePoolSize: 0 };
+                        
+                        this.messages.push({
+                            role: "assistant",
+                            content: "⚠️ 无法获取 ICE 配置，连接可能受限"
+                        });
+                        this.$nextTick(() => { this.scrollToBottom(); });
                     }
 
                     this.pc = new RTCPeerConnection(iceConfig);
@@ -1377,6 +1537,19 @@
                     this.pc.addEventListener('connectionstatechange', () => {
                         this.status = this.pc.connectionState;
                         if (this.pc.connectionState === 'connected') {
+                            // 记录成功连接
+                            this.connectionStats.successes++;
+                            this.connectionStats.lastSuccessTime = new Date();
+                            
+                            const successRate = ((this.connectionStats.successes / this.connectionStats.attempts) * 100).toFixed(1);
+                            console.log(`🎉 连接成功！统计信息:`, {
+                                尝试次数: this.connectionStats.attempts,
+                                成功次数: this.connectionStats.successes,
+                                失败次数: this.connectionStats.failures,
+                                成功率: successRate + '%',
+                                ICE收集耗时: this.connectionStats.iceGatheringDuration + 'ms'
+                            });
+                            
                             this.live2dManager.stopTalking();
                             this.live2dManager.startTalking(this.remoteStream);
                             this.isConnected = true;
@@ -1388,16 +1561,73 @@
                             });
                         } else if (this.pc.connectionState === 'failed') {
                             console.error('PeerConnection failed');
-                            alert('连接失败，可能需要配置 STUN/TURN 服务端');
+                            console.error('当前 ICE 连接状态:', this.pc.iceConnectionState);
+                            console.error('当前 ICE 收集状态:', this.pc.iceGatheringState);
+                            
+                            // 提供更详细的错误信息
+                            this.messages.push({
+                                role: "assistant",
+                                content: "❌ 连接失败！可能原因：\n1. 不在同一网络且未配置 STUN/TURN 服务器\n2. 防火墙阻止了 WebRTC 连接\n3. 网络环境不稳定\n\n请尝试：刷新页面重新连接"
+                            });
+                            this.$nextTick(() => { this.scrollToBottom(); });
+                            
+                            // 仍然显示 alert 以引起用户注意
+                            setTimeout(() => {
+                                alert('连接失败，可能需要配置 STUN/TURN 服务器。\n\n如果您不在同一局域网内，请联系管理员配置 STUN/TURN 服务。');
+                            }, 500);
                         } else if (this.pc.connectionState === 'disconnected') {
                             console.warn('PeerConnection disconnected');
+                            this.messages.push({
+                                role: "assistant",
+                                content: "⚠️ 连接已断开"
+                            });
+                            this.$nextTick(() => { this.scrollToBottom(); });
                         }
                     });
                     this.pc.addEventListener('iceconnectionstatechange', () => {
-                        // console.log('ICE connection state:', this.pc.iceConnectionState);
+                        console.log('ICE connection state:', this.pc.iceConnectionState);
+                        
+                        // 诊断信息：记录 ICE 连接状态变化
+                        if (this.pc.iceConnectionState === 'failed') {
+                            console.error('ICE 连接失败 - 可能原因：NAT 穿透失败、防火墙阻止、STUN/TURN 配置无效');
+                            
+                            // 尝试重启 ICE
+                            console.log('尝试重启 ICE 连接...');
+                            this.pc.restartIce();
+                        } else if (this.pc.iceConnectionState === 'disconnected') {
+                            console.warn('ICE 连接断开 - 等待重连...');
+                            
+                            // 设置超时，如果 10 秒内没有重连成功，则提示用户
+                            setTimeout(() => {
+                                if (this.pc && this.pc.iceConnectionState === 'disconnected') {
+                                    console.error('ICE 重连超时');
+                                    this.messages.push({
+                                        role: "assistant",
+                                        content: "⚠️ 网络连接不稳定，正在尝试重新连接..."
+                                    });
+                                    this.$nextTick(() => { this.scrollToBottom(); });
+                                }
+                            }, 10000);
+                        } else if (this.pc.iceConnectionState === 'connected' || this.pc.iceConnectionState === 'completed') {
+                            console.log('✅ ICE 连接成功');
+                        }
                     });
                     this.pc.addEventListener('icegatheringstatechange', () => {
-                        // console.log('ICE gathering state:', this.pc.iceGatheringState);
+                        console.log('ICE gathering state:', this.pc.iceGatheringState);
+                        
+                        if (this.pc.iceGatheringState === 'complete') {
+                            console.log('✅ ICE 候选收集完成');
+                        }
+                    });
+                    
+                    // 监听 ICE 候选事件，用于诊断
+                    this.pc.addEventListener('icecandidate', (event) => {
+                        if (event.candidate) {
+                            const candidate = event.candidate;
+                            console.log(`📡 ICE 候选: type=${candidate.type}, protocol=${candidate.protocol}, address=${candidate.address || 'N/A'}`);
+                        } else {
+                            console.log('ICE 候选收集结束（收到空候选）');
+                        }
                     });
                     this.pc.addEventListener('signalingstatechange', () => {
                         // console.log('Signaling state:', this.pc.signalingState);
@@ -2011,9 +2241,38 @@
                     }
                     if (!document.hasFocus()) return false;
                     return true;
+                },
+                
+                // 打印连接统计（供开发者在控制台调用）
+                printConnectionStats() {
+                    const stats = {
+                        '总尝试次数': this.connectionStats.attempts,
+                        '成功次数': this.connectionStats.successes,
+                        '失败次数': this.connectionStats.failures,
+                        '成功率': this.connectionStats.attempts > 0 ? 
+                            ((this.connectionStats.successes / this.connectionStats.attempts) * 100).toFixed(1) + '%' : 'N/A',
+                        '最后尝试时间': this.connectionStats.lastAttemptTime?.toLocaleString() || 'N/A',
+                        '最后成功时间': this.connectionStats.lastSuccessTime?.toLocaleString() || 'N/A',
+                        'ICE收集耗时': this.connectionStats.iceGatheringDuration + 'ms',
+                        '当前连接状态': this.pc?.connectionState || 'N/A',
+                        '当前ICE状态': this.pc?.iceConnectionState || 'N/A'
+                    };
+                    console.table(stats);
+                    return stats;
                 }
             }
         });
+        
+        // 暴露到全局，方便调试
+        window.printConnectionStats = () => {
+            if (window.chatApp && window.chatApp.printConnectionStats) {
+                return window.chatApp.printConnectionStats();
+            } else {
+                console.warn('chatApp 未初始化');
+            }
+        };
+        
+        console.log('💡 提示: 在控制台输入 printConnectionStats() 可查看连接统计信息');
     </script>
 </body>
 

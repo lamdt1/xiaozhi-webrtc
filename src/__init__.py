@@ -106,7 +106,6 @@ async def server(pc, offer):
     # Dictionary to store track instances
 
     xiaozhi = XiaoZhiServer(pc)
-    await xiaozhi.start()
 
     # 监听来自客户端的 DataChannel
     @pc.on("datachannel")
@@ -140,6 +139,10 @@ async def server(pc, offer):
     @pc.on("connectionstatechange")
     async def on_connectionstatechange():
         logger.info("Connection state is %s %s %s", pc.connectionState, pc.mac_address, pc.client_ip)
+        if pc.connectionState == "connected":
+            await xiaozhi.start()
+
+
         if pc.connectionState in ["failed", "closed", "disconnected"]:
             # Stop all AudioFaceSwapper instances
             if xiaozhi.server:

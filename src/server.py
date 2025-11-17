@@ -15,13 +15,27 @@ class XiaoZhiServer(object):
         self.channel = pc.createDataChannel("chat")
         self.server = None
 
+    def safe_send(self, data):
+        """安全发送消息到数据通道，检查通道状态"""
+        # 检查数据通道状态是否为 "open"
+        if self.channel.readyState == "open":
+            self.channel.send(data)
+        else:
+            logger.warning(
+                "数据通道未打开，无法发送消息 [%s %s] 状态: %s",
+                self.pc.mac_address,
+                self.pc.client_ip,
+                self.channel.readyState,
+            )
+
+
     async def message_handler_callback(self, message):
         logger.info("Received message: %s %s %s", self.pc.mac_address, self.pc.client_ip, message)
         if message["type"] == "websocket" and message["state"] == "close":
             await self.server.close()
             self.server = None
 
-        self.channel.send(json.dumps(message, ensure_ascii=False))
+        self.safe_send(json.dumps(message, ensure_ascii=False))
         if message["type"] == "llm" and hasattr(self.pc, "video_track"):
             self.pc.video_track.set_emoji(message["text"])
 
@@ -38,15 +52,15 @@ class XiaoZhiServer(object):
 
     def mcp_tool_func(self):
         def tool_set_volume(data):
-            self.channel.send(json.dumps({"type": "tool", "text": "set_volume", "value": data["volume"]}))
+            self.safe_send(json.dumps({"type": "tool", "text": "set_volume", "value": data["volume"]}))
             return "", False
 
         def tool_open_tab(data):
-            self.channel.send(json.dumps({"type": "tool", "text": "open_tab", "value": data["url"]}))
+            self.safe_send(json.dumps({"type": "tool", "text": "open_tab", "value": data["url"]}))
             return "", False
 
         def tool_stop_music(data):
-            self.channel.send(json.dumps({"type": "tool", "text": "stop_music"}))
+            self.safe_send(json.dumps({"type": "tool", "text": "stop_music"}))
             return "", False
 
         def tool_get_device_status(data):
