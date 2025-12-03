@@ -75,12 +75,13 @@ class XiaoZhiServer(object):
                 False,
             )
 
-        def tool_take_photo(data):
+        async def tool_take_photo(data):
             img_obj = self.server.video_frame.to_ndarray(format="bgr24")
             # 直接使用 OpenCV 编码图片
             _, img_byte = cv2.imencode(".jpg", img_obj)
             img_byte = img_byte.tobytes()
-            return img_byte, False
+            return await self.server.async_analyze_image(img_byte, data.get("question", "请描述这张图片"))
+
 
         from xiaozhi_sdk.utils.mcp_tool import (
             get_device_status,
@@ -93,6 +94,8 @@ class XiaoZhiServer(object):
         )
 
         take_photo["tool_func"] = tool_take_photo
+        take_photo["is_async"] = True
+
         get_device_status["tool_func"] = tool_get_device_status
         set_volume["tool_func"] = tool_set_volume
         open_tab["tool_func"] = tool_open_tab

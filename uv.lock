@@ -2153,7 +2153,7 @@ wheels = [
 
 [[package]]
 name = "xiaozhi-sdk"
-version = "0.3.3"
+version = "0.4.6"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -2174,9 +2174,9 @@ dependencies = [
     { name = "soundfile" },
     { name = "websockets" },
 ]
-sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/88/4b/169373ef1b826b9d5f8caced917358494da3062a5197a0a655710fd3ec71/xiaozhi_sdk-0.3.3.tar.gz", hash = "sha256:c9be3a1c26959ff5e848686fddfe5e08cc6bdd12c8a5a84e447407158d71c1dd", size = 1795482, upload-time = "2025-11-11T16:11:03.251Z" }
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/73/84/1f170b4993365fd70f062d2da2511d6afb5b55c6bf6b14c64c1e3a33ed19/xiaozhi_sdk-0.4.6.tar.gz", hash = "sha256:e135fae42eeb9e3b6d0e848e86e4241d1b623f4ce599e4611233826ff184edab", size = 1797676, upload-time = "2025-11-23T15:17:41.276Z" }
 wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/38/af/e51d734e4f6f1c5e9444f5ee064442cae10d83fb6c4d26ffd9256b86e69d/xiaozhi_sdk-0.3.3-py3-none-any.whl", hash = "sha256:ba8c0120f0320b6f7b438861bc2c77be322048d44b0fd3d9bd7cc035411528a7", size = 1793294, upload-time = "2025-11-11T16:11:01.114Z" },
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/b9/0b/56fe4f13458249f20f23c1025bea58bd1baa8ee82b8f859e9a4c560bb394/xiaozhi_sdk-0.4.6-py3-none-any.whl", hash = "sha256:b1876412be50b599ee73033b3bc3c6f994b7c9dfcd9d6eee6fbfd764ad28a362", size = 1797020, upload-time = "2025-11-23T15:17:39.418Z" },
 ]
 
 [[package]]
@@ -2232,7 +2232,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.31.0" },
     { name = "sounddevice", specifier = ">=0.5.0" },
     { name = "websockets", specifier = ">=11.0.3" },
-    { name = "xiaozhi-sdk", specifier = ">=0.3.3" },
+    { name = "xiaozhi-sdk", specifier = ">=0.4.6" },
 ]
 provides-extras = ["dev"]
 
