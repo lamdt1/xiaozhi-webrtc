@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import sys
 
 from aiohttp import web
 from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
@@ -14,7 +15,7 @@ from src.track.video import VideoFaceSwapper
 
 # 设置 logger
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    stream=sys.stdout, level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger(__name__)
 
@@ -143,6 +144,13 @@ async def server(pc, offer):
             await xiaozhi.start()
 
         if pc.connectionState in ["failed", "closed", "disconnected"]:
+            # 取消视频消费任务
+            if hasattr(pc, "video_task") and not pc.video_task.done():
+                pc.video_task.cancel()
+                try:
+                    await pc.video_task
+                except asyncio.CancelledError:
+                    pass
             # Stop all AudioFaceSwapper instances
             if xiaozhi.server:
                 await xiaozhi.server.close()
@@ -164,9 +172,14 @@ async def server(pc, offer):
                         frame = await track.recv()
                         if xiaozhi and xiaozhi.server:
                             xiaozhi.server.video_frame = frame
-                    except Exception:
+                    except asyncio.CancelledError:
+                        logger.debug("视频消费任务被取消 [%s %s]", pc.mac_address, pc.client_ip)
                         break
-            asyncio.create_task(consume_video())
+                    except Exception as e:
+                        logger.debug("视频消费任务异常退出 [%s %s]: %s", pc.mac_address, pc.client_ip, e)
+                        break
+            # 保存任务引用以便后续取消
+            pc.video_task = asyncio.create_task(consume_video())
 
     await pc.setRemoteDescription(offer)
     answer = await pc.createAnswer()
